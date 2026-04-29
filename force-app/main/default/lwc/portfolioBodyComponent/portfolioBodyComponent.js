@@ -108,7 +108,7 @@ export default class PortfolioBodyComponent extends LightningElement {
             this.dispatchCustomEvent('nav', 'downloadResume');
         }
         if (event == 'Learning') {
-            window.open('https://rushi7287.github.io/rushikeshPortfolio/#/learningroute/lwc/1', '_blank').focus()
+            window.open('https://rushi7287.github.io/salesforce-dev-handbook-react/#/learningroute/lwc/1', '_blank').focus()
             this.dispatchCustomEvent('nav', 'learning');
         }
         if (event == 'LinkedIn') {
