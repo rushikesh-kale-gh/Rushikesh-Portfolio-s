@@ -1,348 +1,366 @@
-/* ══════════════════════════════════════════
-   Daily Tracker — Apple-style Glassmorphism
-   ══════════════════════════════════════════ */
-:host { display: block; }
-
-/* Root — dark gradient background */
-.tracker-root {
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
-    background: linear-gradient(145deg, #0d0d1a 0%, #0a1628 40%, #0d1a0d 100%);
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-                 'SF Pro Text', 'Helvetica Neue', sans-serif;
-    color: #ffffff;
-    box-sizing: border-box;
-    position: relative;
-    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Ambient glow spots (pure CSS, no images) */
-.tracker-root::before {
-    content: '';
-    position: fixed;
-    top: -120px;
-    left: -80px;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(10,132,255,0.12) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
-.tracker-root::after {
-    content: '';
-    position: fixed;
-    bottom: -100px;
-    right: -80px;
-    width: 420px;
-    height: 420px;
-    background: radial-gradient(circle, rgba(52,199,89,0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* ── Loading ── */
-.loading-state {
+.dashboard-title {
+    font-size: 32px;
+    margin: 0;
+    font-weight: 700;
+}
+
+.user-greeting {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 5px 0;
+}
+
+.current-date {
+    font-size: 12px;
+    opacity: 0.8;
+    margin: 0;
+}
+
+.btn-logout {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.score-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.score-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.score-card:hover {
+    transform: translateY(-5px);
+}
+
+.score-card p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.score-value {
+    font-size: 28px !important;
+    font-weight: 700;
+    margin-top: 10px !important;
+}
+
+.score-card.overall .score-value { color: #667eea; }
+.score-card.health .score-value { color: #34C759; }
+.score-card.career .score-value { color: #0A84FF; }
+.score-card.discipline .score-value { color: #FF9F0A; }
+
+.tabs-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.tabs-header {
+    display: flex;
+    border-bottom: 2px solid #e5e7eb;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 16px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    background: #f9fafb;
+    color: #333;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.tab-pane {
+    padding: 30px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-pane h2 {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    color: #1f2937;
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 200px;
+    transition: border-color 0.3s ease;
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-select, .form-input {
+    padding: 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.form-select:focus, .form-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.calendar-controls button {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.day-label {
+    text-align: center;
+    font-weight: 600;
+    color: #666;
+    padding: 10px 0;
+    font-size: 12px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
-    gap: 16px;
-}
-
-.spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid rgba(255,255,255,0.1);
-    border-top-color: #0A84FF;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-text {
-    font-size: 14px;
-    color: rgba(255,255,255,0.4);
-    margin: 0;
-}
-
-/* ── Header ── */
-.dt-header {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 24px 20px 16px;
-}
-
-.header-left { flex: 1; }
-
-.header-date {
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.4);
-    letter-spacing: 0.3px;
-    margin: 0 0 4px;
-    text-transform: uppercase;
-}
-
-.header-title {
-    font-size: 26px;
-    font-weight: 700;
-    color: #ffffff;
-    margin: 0;
-    letter-spacing: -0.6px;
-    line-height: 1.15;
-}
-
-.header-right {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding-top: 4px;
-}
-
-.reflect-btn,
-.analytics-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.7);
+    border-radius: 8px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s ease, transform 0.1s ease;
+    font-weight: 600;
+    transition: transform 0.3s ease;
+    position: relative;
 }
 
-.reflect-btn:hover,
-.analytics-btn:hover {
-    background: rgba(255,255,255,0.15);
+.calendar-day:hover {
     transform: scale(1.05);
 }
 
-.reflect-btn:active,
-.analytics-btn:active  { transform: scale(0.95); }
+.calendar-day.green { background: #34C759; color: white; }
+.calendar-day.yellow { background: #FFD700; color: #333; }
+.calendar-day.orange { background: #FF9F0A; color: white; }
+.calendar-day.red { background: #FF453A; color: white; }
+.calendar-day.gray { background: #e5e7eb; color: #666; }
 
-/* ── Glass Card (base) ── */
-.glass-card {
-    position: relative;
-    z-index: 1;
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 20px;
-    margin: 0 16px 16px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3),
-                0 1px 0 rgba(255,255,255,0.06) inset;
+.day-number {
+    font-size: 14px;
 }
 
-/* ── Score Section ── */
-.score-section {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    flex-wrap: wrap;
-}
-
-.score-stats {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0;
-    min-width: 0;
-}
-
-.stat-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-}
-
-.stat-num {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    line-height: 1;
-}
-
-.stat-num small {
-    font-size: 13px;
-    font-weight: 500;
-    vertical-align: super;
-}
-
-.stat-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.4);
-    text-align: center;
-    white-space: nowrap;
-}
-
-.stat-divider {
-    width: 1px;
-    height: 36px;
-    background: rgba(255,255,255,0.08);
-    flex-shrink: 0;
-}
-
-/* ── Task Section Cards ── */
-.task-section {
-    transition: transform 0.2s ease;
-}
-
-/* Category accent lines */
-.health-card     { border-top: 2px solid rgba(52,199,89,0.4);   }
-.career-card     { border-top: 2px solid rgba(10,132,255,0.5);  }
-.discipline-card { border-top: 2px solid rgba(255,159,10,0.4);  }
-
-.section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.section-title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.section-icon { font-size: 18px; }
-
-.section-title {
-    font-size: 17px;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
-    letter-spacing: -0.3px;
-}
-
-.priority-badge {
+.day-score {
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    color: #0A84FF;
-    background: rgba(10,132,255,0.15);
-    border: 1px solid rgba(10,132,255,0.3);
-    border-radius: 20px;
-    padding: 2px 8px;
+    opacity: 0.8;
 }
 
-.section-progress {
-    font-size: 13px;
+.task-card {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border-left: 4px solid #667eea;
+}
+
+.task-card h4 {
+    margin: 0 0 8px 0;
+    color: #1f2937;
+}
+
+.badge {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: -0.2px;
+    margin: 0 4px 0 0;
 }
 
-.health-text     { color: #34C759; }
-.career-text     { color: #0A84FF; }
-.discipline-text { color: #FF9F0A; }
-
-.task-list {
+.habit-item {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
     display: flex;
-    flex-direction: column;
-    gap: 0;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.empty-state {
-    font-size: 14px;
-    color: rgba(255,255,255,0.25);
-    text-align: center;
-    padding: 20px 0;
+.habit-item p {
     margin: 0;
-    font-style: italic;
-}
-
-/* ── Toast ── */
-.toast-msg {
-    position: fixed;
-    bottom: 32px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    padding: 10px 20px;
-    border-radius: 24px;
+    color: #1f2937;
     font-size: 14px;
-    font-weight: 500;
-    letter-spacing: -0.1px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,0.15);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    white-space: nowrap;
-    animation: toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 
-@keyframes toastIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    animation: slideIn 0.3s ease;
 }
 
-.toast-success {
-    background: rgba(52,199,89,0.2);
-    color: #34C759;
-    border-color: rgba(52,199,89,0.3);
+.toast.success {
+    background: #34C759;
 }
 
-.toast-error {
-    background: rgba(255,69,58,0.2);
-    color: #FF453A;
-    border-color: rgba(255,69,58,0.3);
+.toast.error {
+    background: #FF453A;
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE — Tablet (768px+)
-   ══════════════════════════════════════════ */
-@media (min-width: 768px) {
-    .dt-header       { padding: 32px 28px 20px; }
-    .header-title    { font-size: 30px; }
-    .glass-card      { margin: 0 24px 20px; padding: 24px; }
-    .score-section   { gap: 32px; }
-    .stat-num        { font-size: 26px; }
-    .stat-label      { font-size: 12px; }
-
-    /* Side-by-side task columns on tablet */
-    .task-sections-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        margin: 0 24px 20px;
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
     }
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE — Desktop (1024px+)
-   ══════════════════════════════════════════ */
-@media (min-width: 1024px) {
-    .tracker-root { max-width: 960px; margin: 0 auto; }
-    .dt-header    { padding: 36px 32px 20px; }
-    .glass-card   { margin: 0 0 20px; padding: 28px; }
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 12px;
+    }
 
-    /* 3-column layout for task sections */
-    .task-section  { margin: 0; }
-}
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE — Small Phone (<375px)
-   ══════════════════════════════════════════ */
-@media (max-width: 374px) {
-    .header-title    { font-size: 21px; }
-    .stat-num        { font-size: 18px; }
-    .glass-card      { margin: 0 12px 12px; padding: 16px; }
-    .section-title   { font-size: 15px; }
-    .score-section   { flex-direction: column; gap: 16px; }
+    .score-overview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .tabs-header {
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        flex: 0 1 auto;
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+
+    .tab-pane {
+        padding: 20px;
+    }
+
+    .calendar-grid {
+        gap: 4px;
+    }
 }

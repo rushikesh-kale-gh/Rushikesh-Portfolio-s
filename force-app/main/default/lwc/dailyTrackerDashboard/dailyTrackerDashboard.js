@@ -1,136 +1,297 @@
 import { LightningElement, track } from 'lwc';
-import getOrCreateTodayLog from '@salesforce/apex/DailyTrackerController.getOrCreateTodayLog';
-import getTodayTasks        from '@salesforce/apex/DailyTrackerController.getTodayTasks';
-import saveTaskStatus       from '@salesforce/apex/DailyTrackerController.saveTaskStatus';
-import calculateScore       from '@salesforce/apex/DailyTrackerController.calculateScore';
-
-const MOTIVATION = [
-    'Make today count.', 'Build the habit.', 'One step at a time.',
-    'Focus. Execute. Win.', 'Small wins compound.', 'Stay consistent.',
-    'Progress, not perfection.', 'Show up. Every day.'
-];
-
-const DAYS_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const MONTHS    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+import getDailyLog from '@salesforce/apex/DailyTrackerController.getDailyLog';
+import saveDailyLog from '@salesforce/apex/DailyTrackerController.saveDailyLog';
+import getTasksForDate from '@salesforce/apex/DailyTrackerController.getTasksForDate';
+import saveTaskLog from '@salesforce/apex/DailyTrackerController.saveTaskLog';
+import getUserTasks from '@salesforce/apex/DailyTrackerController.getUserTasks';
+import createTask from '@salesforce/apex/DailyTrackerController.createTask';
+import deleteTask from '@salesforce/apex/DailyTrackerController.deleteTask';
+import getLogsDateRange from '@salesforce/apex/DailyTrackerController.getLogsDateRange';
+import getCalendarData from '@salesforce/apex/DailyTrackerController.getCalendarData';
 
 export default class DailyTrackerDashboard extends LightningElement {
-    @track dayLog         = { Total_Tasks__c: 0, Completed_Tasks__c: 0, Score__c: 0,
-                               Health_Score__c: 0, Career_Score__c: 0, Discipline_Score__c: 0,
-                               Reflection__c: '' };
-    @track allTasks       = [];
-    @track isLoading      = true;
-    @track showAnalytics  = false;
-    @track showToast      = false;
-    @track toastMessage   = '';
-    @track toastType      = 'success';  // success | error
-
-    dayLogId = null;
-
-    // ─── Lifecycle ─────────────────────────────
-    connectedCallback() { this.initDashboard(); }
-
-    async initDashboard() {
-        this.isLoading = true;
-        try {
-            const log = await getOrCreateTodayLog();
-            this.dayLogId = log.Id;
-            this.dayLog   = { ...log };
-            await this.refreshTasks();
-        } catch (err) {
-            console.error('Init error:', err);
-            this.showNotification('Failed to load tracker', 'error');
-        } finally {
-            this.isLoading = false;
+    @track isLoggedIn = false;
+    @track currentUsername = '';
+    @track currentUserId = '';
+    @track todayDateLabel = '';
+    
+    @track activeTab = 'reflection';
+    @track isTabActive = { reflection: true, logs: false, calendar: false, tasks: false, habits: false };
+    
+    @track dayLogScore = 0;
+    @track healthScore = 0;
+    @track careerScore = 0;
+    @track disciplineScore = 0;
+    
+    @track reflectionText = '';
+    @track reflectionSaved = false;
+    
+    @track analyticsRange = 'week';
+    @track analyticsData = [];
+    
+    @track currentMonth = new Date().getMonth() + 1;
+    @track currentYear = new Date().getFullYear();
+    @track calendarMonthYear = '';
+    @track calendarDays = [];
+    
+    @track todayTasks = [];
+    @track userHabits = [];
+    @track noTasks = false;
+    @track noHabits = false;
+    
+    @track newHabitName = '';
+    @track newHabitCategory = '';
+    @track newHabitPriority = '';
+    @track newHabitTarget = '';
+    
+    @track showToast = false;
+    @track toastMessage = '';
+    @track toastType = 'success';
+    
+    connectedCallback() {
+        this.updateDateLabel();
+        this.loadTasks();
+        this.loadCalendar();
+    }
+    
+    handleLoginSuccess(event) {
+        this.currentUserId = event.detail.userId;
+        this.currentUsername = event.detail.username;
+        this.isLoggedIn = true;
+        this.loadDailyLog();
+        this.loadTasks();
+    }
+    
+    handleAccountCreated(event) {
+        this.currentUserId = event.detail.userId;
+        this.currentUsername = event.detail.username;
+        this.isLoggedIn = true;
+        this.loadDailyLog();
+    }
+    
+    loadDailyLog() {
+        getDailyLog({ userAccountId: this.currentUserId, logDate: new Date() })
+            .then((result) => {
+                if (result.found) {
+                    this.dayLogScore = result.score || 0;
+                    this.healthScore = result.healthScore || 0;
+                    this.careerScore = result.careerScore || 0;
+                    this.disciplineScore = result.disciplineScore || 0;
+                    this.reflectionText = result.reflection || '';
+                } else {
+                    this.dayLogScore = 0;
+                    this.healthScore = 0;
+                    this.careerScore = 0;
+                    this.disciplineScore = 0;
+                }
+            })
+            .catch((error) => console.error('Error loading daily log:', error));
+    }
+    
+    loadTasks() {
+        getUserTasks({ userAccountId: this.currentUserId })
+            .then((result) => {
+                this.userHabits = result || [];
+                this.noHabits = this.userHabits.length === 0;
+                
+                // Load today's tasks
+                getTasksForDate({ userAccountId: this.currentUserId, logDate: new Date() })
+                    .then((tasks) => {
+                        this.todayTasks = tasks || [];
+                        this.noTasks = this.todayTasks.length === 0;
+                    });
+            })
+            .catch((error) => console.error('Error loading tasks:', error));
+    }
+    
+    loadCalendar() {
+        getCalendarData({ userAccountId: this.currentUserId, year: this.currentYear, month: this.currentMonth })
+            .then((result) => {
+                this.calendarDays = result || [];
+                this.updateCalendarLabel();
+            })
+            .catch((error) => console.error('Error loading calendar:', error));
+    }
+    
+    updateDateLabel() {
+        const today = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        this.todayDateLabel = today.toLocaleDateString('en-US', options);
+    }
+    
+    updateCalendarLabel() {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        this.calendarMonthYear = `${monthNames[this.currentMonth - 1]} ${this.currentYear}`;
+    }
+    
+    selectTab(event) {
+        const tabName = event.target.dataset.tab;
+        this.activeTab = tabName;
+        this.isTabActive = { reflection: false, logs: false, calendar: false, tasks: false, habits: false };
+        this.isTabActive[tabName] = true;
+        
+        if (tabName === 'logs') {
+            this.loadAnalytics();
+        } else if (tabName === 'calendar') {
+            this.loadCalendar();
         }
     }
-
-    async refreshTasks() {
-        const tasks = await getTodayTasks({ dayLogId: this.dayLogId });
-        this.allTasks = tasks || [];
+    
+    getTabClass(tabName) {
+        return `tab-btn ${this.activeTab === tabName ? 'active' : ''}`;
     }
-
-    // ─── Computed ──────────────────────────────
-    get todayDateLabel() {
-        const d = new Date();
-        return `${DAYS_LONG[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+    
+    updateReflectionText(event) {
+        this.reflectionText = event.target.value;
+        this.reflectionSaved = false;
     }
-
-    get motivationText() {
-        const idx = new Date().getDay() % MOTIVATION.length;
-        return MOTIVATION[idx];
+    
+    saveReflection() {
+        saveDailyLog({ userAccountId: this.currentUserId, logDate: new Date(), reflection: this.reflectionText })
+            .then(() => {
+                this.reflectionSaved = true;
+                this.showToastMessage('Reflection saved!', 'success');
+                setTimeout(() => { this.reflectionSaved = false; }, 3000);
+            })
+            .catch((error) => this.showToastMessage('Error saving reflection', 'error'));
     }
-
-    get healthTasks()     { return this.allTasks.filter(t => t.category === 'Health');     }
-    get careerTasks()     { return this.allTasks.filter(t => t.category === 'Career');     }
-    get disciplineTasks() { return this.allTasks.filter(t => t.category === 'Discipline'); }
-
-    get noHealthTasks()     { return this.healthTasks.length === 0;     }
-    get noCareerTasks()     { return this.careerTasks.length === 0;     }
-    get noDisciplineTasks() { return this.disciplineTasks.length === 0; }
-
-    get healthProgress()     { return this._catProg(this.healthTasks);     }
-    get careerProgress()     { return this._catProg(this.careerTasks);     }
-    get disciplineProgress() { return this._catProg(this.disciplineTasks); }
-
-    _catProg(tasks) {
-        if (!tasks.length) return '0 / 0';
-        const done = tasks.filter(t => t.status).length;
-        return `${done} / ${tasks.length}`;
+    
+    changeAnalyticsRange(event) {
+        this.analyticsRange = event.target.value;
+        this.loadAnalytics();
     }
-
-    get toastClass() {
-        return `toast-msg ${this.toastType === 'error' ? 'toast-error' : 'toast-success'}`;
+    
+    loadAnalytics() {
+        const today = new Date();
+        let startDate = new Date(today);
+        
+        if (this.analyticsRange === 'week') {
+            startDate.setDate(today.getDate() - 7);
+        } else if (this.analyticsRange === 'month') {
+            startDate.setDate(today.getDate() - 30);
+        }
+        
+        getLogsDateRange({ userAccountId: this.currentUserId, startDate: startDate, endDate: today })
+            .then((result) => {
+                this.analyticsData = result || [];
+            })
+            .catch((error) => console.error('Error loading analytics:', error));
     }
-
-    // ─── Task Status Change ─────────────────────
-    async handleStatusChange(event) {
-        const { taskId, status } = event.detail;
-
-        // Optimistic UI update
-        this.allTasks = this.allTasks.map(t =>
-            t.taskId === taskId ? { ...t, status } : t
-        );
-
-        try {
-            await saveTaskStatus({
-                dayLogId: this.dayLogId,
-                taskId,
-                status
-            });
-            const updatedLog = await calculateScore({ dayLogId: this.dayLogId });
-            this.dayLog = { ...updatedLog };
-            this.showNotification(status ? '✓ Task completed' : 'Task marked incomplete', 'success');
-        } catch (err) {
-            console.error('Save error:', err);
-            // Revert optimistic update
-            this.allTasks = this.allTasks.map(t =>
-                t.taskId === taskId ? { ...t, status: !status } : t
-            );
-            this.showNotification('Failed to save', 'error');
+    
+    prevMonth() {
+        this.currentMonth--;
+        if (this.currentMonth < 1) {
+            this.currentMonth = 12;
+            this.currentYear--;
+        }
+        this.loadCalendar();
+    }
+    
+    nextMonth() {
+        this.currentMonth++;
+        if (this.currentMonth > 12) {
+            this.currentMonth = 1;
+            this.currentYear++;
+        }
+        this.loadCalendar();
+    }
+    
+    getDayClass(day) {
+        let classStr = 'calendar-day';
+        if (day.color === 'green') classStr += ' green';
+        else if (day.color === 'yellow') classStr += ' yellow';
+        else if (day.color === 'orange') classStr += ' orange';
+        else if (day.color === 'red') classStr += ' red';
+        else classStr += ' gray';
+        return classStr;
+    }
+    
+    toggleTask(event) {
+        const taskId = event.target.dataset.taskid;
+        const task = this.todayTasks.find(t => t.id === taskId);
+        if (task) {
+            task.completed = event.target.checked;
         }
     }
-
-    // ─── Reflection ────────────────────────────
-    openReflection() {
-        this.template.querySelector('c-daily-reflection-modal').open();
+    
+    updateIntensity(event) {
+        const taskId = event.target.dataset.taskid;
+        const task = this.todayTasks.find(t => t.id === taskId);
+        if (task) {
+            task.intensity = parseInt(event.target.value);
+        }
     }
-
-    handleReflectionSaved(event) {
-        this.dayLog = { ...this.dayLog, Reflection__c: event.detail.text };
-        this.showNotification('Reflection saved ✓', 'success');
+    
+    updateNewHabitName(event) {
+        this.newHabitName = event.target.value;
     }
-
-    // ─── Analytics Toggle ──────────────────────
-    toggleAnalytics() {
-        this.showAnalytics = !this.showAnalytics;
+    
+    updateNewHabitCategory(event) {
+        this.newHabitCategory = event.target.value;
     }
-
-    // ─── Toast ─────────────────────────────────
-    showNotification(message, type = 'success') {
+    
+    updateNewHabitPriority(event) {
+        this.newHabitPriority = event.target.value;
+    }
+    
+    addHabit() {
+        if (!this.newHabitName || !this.newHabitCategory || !this.newHabitPriority) {
+            this.showToastMessage('Please fill all fields', 'error');
+            return;
+        }
+        
+        createTask({
+            userAccountId: this.currentUserId,
+            taskName: this.newHabitName,
+            category: this.newHabitCategory,
+            priority: this.newHabitPriority,
+            targetQuantity: this.newHabitTarget ? parseInt(this.newHabitTarget) : null
+        })
+            .then(() => {
+                this.newHabitName = '';
+                this.newHabitCategory = '';
+                this.newHabitPriority = '';
+                this.newHabitTarget = '';
+                this.loadTasks();
+                this.showToastMessage('Habit added!', 'success');
+            })
+            .catch((error) => this.showToastMessage('Error adding habit', 'error'));
+    }
+    
+    deleteHabit(event) {
+        const habitId = event.target.dataset.habitid;
+        deleteTask({ taskId: habitId })
+            .then(() => {
+                this.loadTasks();
+                this.showToastMessage('Habit deleted', 'success');
+            })
+            .catch((error) => this.showToastMessage('Error deleting habit', 'error'));
+    }
+    
+    handleLogout() {
+        this.isLoggedIn = false;
+        this.currentUserId = '';
+        this.currentUsername = '';
+    }
+    
+    showToastMessage(message, type) {
         this.toastMessage = message;
-        this.toastType    = type;
-        this.showToast    = true;
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
-        setTimeout(() => { this.showToast = false; }, 2500);
+        this.toastType = type;
+        this.showToast = true;
+        setTimeout(() => { this.showToast = false; }, 3000);
+    }
+    
+    getToastClass() {
+        return `toast ${this.toastType}`;
+    }
+    
+    getCategoryStyle(category) {
+        const colors = {
+            'Health': 'background-color: #34C759; color: white;',
+            'Career': 'background-color: #0A84FF; color: white;',
+            'Discipline': 'background-color: #FF9F0A; color: white;'
+        };
+        return colors[category] || 'background-color: #6c757d; color: white;';
     }
 }

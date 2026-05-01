@@ -1,0 +1,191 @@
+<template>
+  <div class="auth-container">
+    <!-- Login Screen -->
+    <template if:false={isCreateMode}>
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1 class="auth-title">Daily Tracker</h1>
+          <p class="auth-subtitle">Your Personal Achievement System</p>
+        </div>
+
+        <template if:false={isForgotPassword}>
+          <div class="auth-form">
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input
+                type="text"
+                class="form-input"
+                value={loginUsername}
+                onchange={handleLoginUsernameChange}
+                placeholder="Enter your username"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input
+                type="password"
+                class="form-input"
+                value={loginPassword}
+                onchange={handleLoginPasswordChange}
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <template if:true={loginError}>
+              <div class="error-message">{loginError}</div>
+            </template>
+
+            <button class="btn btn-primary btn-block" onclick={handleSignIn}>
+              Sign In
+            </button>
+
+            <div class="form-divider">OR</div>
+
+            <button class="btn btn-secondary btn-block" onclick={handleCreateMode}>
+              Create New Account
+            </button>
+
+            <button class="btn-link" onclick={handleForgotPassword}>
+              Forgot Password?
+            </button>
+          </div>
+        </template>
+
+        <template if:true={isForgotPassword}>
+          <div class="auth-form">
+            <button class="btn-back" onclick={handleBackFromForgot}>← Back</button>
+
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input
+                type="text"
+                class="form-input"
+                value={forgotUsername}
+                onchange={handleForgotUsernameChange}
+                placeholder="Enter your username"
+              />
+            </div>
+
+            <div class="form-group" id="securityQuestion">
+              <label class="form-label" id="questionLabel">Security Question</label>
+              <template if:true={securityQuestion}>
+                <p class="security-q-text">{securityQuestion}</p>
+              </template>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Answer</label>
+              <input
+                type="text"
+                class="form-input"
+                value={forgotSecurityAnswer}
+                onchange={handleForgotAnswerChange}
+                placeholder="Enter your answer"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input
+                type="password"
+                class="form-input"
+                value={forgotNewPassword}
+                onchange={handleForgotNewPasswordChange}
+                placeholder="Enter new password"
+              />
+            </div>
+
+            <template if:true={forgotError}>
+              <div class="error-message">{forgotError}</div>
+            </template>
+
+            <button class="btn btn-primary btn-block" onclick={handleResetPassword}>
+              Reset Password
+            </button>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- Create Account Screen -->
+    <template if:true={isCreateMode}>
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1 class="auth-title">Create Account</h1>
+          <p class="auth-subtitle">Start Your Journey</p>
+        </div>
+
+        <div class="auth-form">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input
+              type="text"
+              class="form-input"
+              value={createUsername}
+              onchange={handleCreateUsernameChange}
+              placeholder="Choose a username"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input
+              type="password"
+              class="form-input"
+              value={createPassword}
+              onchange={handleCreatePasswordChange}
+              placeholder="Create a password"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <input
+              type="password"
+              class="form-input"
+              value={createPasswordConfirm}
+              onchange={handleCreatePasswordConfirmChange}
+              placeholder="Confirm password"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Security Question</label>
+            <select class="form-select" value={createSecurityQuestion} onchange={handleCreateSecurityQuestionChange}>
+              <option value="">Select a security question</option>
+              <option value="City Born">What city were you born in?</option>
+              <option value="First Pet">What was your first pet's name?</option>
+              <option value="School Name">What was the name of your school?</option>
+              <option value="Favorite Color">What is your favorite color?</option>
+              <option value="Mother Maiden">What was your mother's maiden name?</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Answer</label>
+            <input
+              type="text"
+              class="form-input"
+              value={createSecurityAnswer}
+              onchange={handleCreateSecurityAnswerChange}
+              placeholder="Answer your security question"
+            />
+          </div>
+
+          <template if:true={createError}>
+            <div class="error-message">{createError}</div>
+          </template>
+
+          <button class="btn btn-primary btn-block" onclick={handleCreateAccount}>
+            Create Account
+          </button>
+
+          <button class="btn-link" onclick={handleBackToLogin}>
+            Already have an account? Sign In
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>

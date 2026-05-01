@@ -1,175 +1,135 @@
 <template>
-    <!-- Dark gradient background wrapper -->
-    <div class="tracker-root">
+  <template if:false={isLoggedIn}>
+    <c-authentication-screen onloginsuccess={handleLoginSuccess} onaccountcreated={handleAccountCreated}></c-authentication-screen>
+  </template>
 
-        <!-- Loading State -->
-        <template if:true={isLoading}>
-            <div class="loading-state">
-                <div class="spinner"></div>
-                <p class="loading-text">Loading your day…</p>
-            </div>
+  <template if:true={isLoggedIn}>
+    <div class="dashboard-container">
+      <header class="dashboard-header">
+        <div class="header-content">
+          <h1 class="dashboard-title">Daily Tracker</h1>
+          <p class="user-greeting">Welcome, {currentUsername}!</p>
+          <p class="current-date">{todayDateLabel}</p>
+          <button class="btn-logout" onclick={handleLogout}>Sign Out</button>
+        </div>
+      </header>
+
+      <div class="score-overview">
+        <div class="score-card overall">
+          <p>Overall</p>
+          <p class="score-value">{dayLogScore}%</p>
+        </div>
+        <div class="score-card health">
+          <p>Health</p>
+          <p class="score-value">{healthScore}%</p>
+        </div>
+        <div class="score-card career">
+          <p>Career</p>
+          <p class="score-value">{careerScore}%</p>
+        </div>
+        <div class="score-card discipline">
+          <p>Discipline</p>
+          <p class="score-value">{disciplineScore}%</p>
+        </div>
+      </div>
+
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class={getTabClass('reflection')} onclick={selectTab} data-tab="reflection">📝 Reflection</button>
+          <button class={getTabClass('logs')} onclick={selectTab} data-tab="logs">📊 Show Log</button>
+          <button class={getTabClass('calendar')} onclick={selectTab} data-tab="calendar">📅 Calendar</button>
+          <button class={getTabClass('tasks')} onclick={selectTab} data-tab="tasks">✅ Tasks</button>
+          <button class={getTabClass('habits')} onclick={selectTab} data-tab="habits">⚙️ Habits</button>
+        </div>
+
+        <template if:true={isTabActive.reflection}>
+          <div class="tab-pane">
+            <h2>Today's Reflection</h2>
+            <textarea class="form-textarea" value={reflectionText} onchange={updateReflectionText} placeholder="How was your day?"></textarea>
+            <button class="btn btn-primary" onclick={saveReflection}>Save Reflection</button>
+          </div>
         </template>
 
-        <!-- Main Content -->
-        <template if:false={isLoading}>
+        <template if:true={isTabActive.logs}>
+          <div class="tab-pane">
+            <h2>Performance Analytics</h2>
+            <select class="form-select" value={analyticsRange} onchange={changeAnalyticsRange}>
+              <option value="day">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+            </select>
+            <div class="chart-placeholder"><p>📊 Analytics Chart</p></div>
+          </div>
+        </template>
 
-            <!-- ── Header ── -->
-            <header class="dt-header">
-                <div class="header-left">
-                    <p class="header-date">{todayDateLabel}</p>
-                    <h1 class="header-title">{motivationText}</h1>
-                </div>
-                <div class="header-right">
-                    <button class="reflect-btn" onclick={openReflection} title="Add Reflection">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <path d="M3 3h12v10H3zM3 13l3 3 3-3"
-                                  stroke="currentColor" stroke-width="1.5"
-                                  stroke-linecap="round" stroke-linejoin="round"
-                                  fill="none"/>
-                        </svg>
-                    </button>
-                    <button class="analytics-btn" onclick={toggleAnalytics} title="Analytics">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <rect x="2" y="10" width="3" height="6" rx="1"
-                                  fill="currentColor" opacity=".7"/>
-                            <rect x="7.5" y="6" width="3" height="10" rx="1" fill="currentColor"/>
-                            <rect x="13" y="2" width="3" height="14" rx="1"
-                                  fill="currentColor" opacity=".7"/>
-                        </svg>
-                    </button>
-                </div>
-            </header>
-
-            <!-- ── Score Ring + Stats ── -->
-            <div class="score-section glass-card">
-                <c-progress-ring
-                    total-tasks={dayLog.Total_Tasks__c}
-                    completed-tasks={dayLog.Completed_Tasks__c}>
-                </c-progress-ring>
-                <div class="score-stats">
-                    <div class="stat-item">
-                        <span class="stat-num" style="color:#34C759">{dayLog.Health_Score__c}<small>%</small></span>
-                        <span class="stat-label">💚 Health</span>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <span class="stat-num" style="color:#0A84FF">{dayLog.Career_Score__c}<small>%</small></span>
-                        <span class="stat-label">💼 Career</span>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <span class="stat-num" style="color:#FF9F0A">{dayLog.Discipline_Score__c}<small>%</small></span>
-                        <span class="stat-label">⚡ Discipline</span>
-                    </div>
-                </div>
+        <template if:true={isTabActive.calendar}>
+          <div class="tab-pane">
+            <h2>Performance Calendar</h2>
+            <div class="calendar-controls">
+              <button onclick={prevMonth}>← Prev</button>
+              <span>{calendarMonthYear}</span>
+              <button onclick={nextMonth}>Next →</button>
             </div>
+            <div class="calendar-grid">
+              <div class="day-label">S</div><div class="day-label">M</div><div class="day-label">T</div>
+              <div class="day-label">W</div><div class="day-label">T</div><div class="day-label">F</div><div class="day-label">S</div>
+              <template for:each={calendarDays} for:item="day">
+                <div class={getDayClass(day)} key={day.date}>{day.day}<template if:true={day.score}><small>{day.score}%</small></template></div>
+              </template>
+            </div>
+          </div>
+        </template>
 
-            <!-- ── Analytics Panel ── -->
-            <template if:true={showAnalytics}>
-                <c-analytics-dashboard></c-analytics-dashboard>
+        <template if:true={isTabActive.tasks}>
+          <div class="tab-pane">
+            <h2>Today's Tasks</h2>
+            <template for:each={todayTasks} for:item="task">
+              <div class="task-card" key={task.id}>
+                <h4>{task.name}</h4><span class="badge">{task.category}</span>
+                <p>Priority: {task.priority}</p>
+                <input type="checkbox" checked={task.completed} onchange={toggleTask} data-taskid={task.id} />
+                <template if:true={task.completed}>
+                  <input type="range" min="0" max="100" value={task.intensity} onchange={updateIntensity} data-taskid={task.id} />
+                  <span>{task.intensity}%</span>
+                </template>
+              </div>
             </template>
-
-            <!-- ── Task Sections ── -->
-            <template if:false={showAnalytics}>
-
-                <!-- Health -->
-                <div class="task-section glass-card health-card">
-                    <div class="section-header">
-                        <div class="section-title-row">
-                            <span class="section-icon health">💚</span>
-                            <h2 class="section-title">Health</h2>
-                        </div>
-                        <span class="section-progress health-text">{healthProgress}</span>
-                    </div>
-                    <div class="task-list" role="list">
-                        <template for:each={healthTasks} for:item="task">
-                            <c-task-item
-                                key={task.taskId}
-                                task-id={task.taskId}
-                                task-name={task.taskName}
-                                type={task.taskType}
-                                status={task.status}
-                                onstatuschange={handleStatusChange}>
-                            </c-task-item>
-                        </template>
-                        <template if:true={noHealthTasks}>
-                            <p class="empty-state">No health tasks configured</p>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Career (highlighted) -->
-                <div class="task-section glass-card career-card">
-                    <div class="section-header">
-                        <div class="section-title-row">
-                            <span class="section-icon career">💼</span>
-                            <h2 class="section-title">Career</h2>
-                            <span class="priority-badge">Priority</span>
-                        </div>
-                        <span class="section-progress career-text">{careerProgress}</span>
-                    </div>
-                    <div class="task-list" role="list">
-                        <template for:each={careerTasks} for:item="task">
-                            <c-task-item
-                                key={task.taskId}
-                                task-id={task.taskId}
-                                task-name={task.taskName}
-                                type={task.taskType}
-                                status={task.status}
-                                onstatuschange={handleStatusChange}>
-                            </c-task-item>
-                        </template>
-                        <template if:true={noCareerTasks}>
-                            <p class="empty-state">No career tasks configured</p>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Discipline -->
-                <div class="task-section glass-card discipline-card">
-                    <div class="section-header">
-                        <div class="section-title-row">
-                            <span class="section-icon discipline">⚡</span>
-                            <h2 class="section-title">Discipline</h2>
-                        </div>
-                        <span class="section-progress discipline-text">{disciplineProgress}</span>
-                    </div>
-                    <div class="task-list" role="list">
-                        <template for:each={disciplineTasks} for:item="task">
-                            <c-task-item
-                                key={task.taskId}
-                                task-id={task.taskId}
-                                task-name={task.taskName}
-                                type={task.taskType}
-                                status={task.status}
-                                onstatuschange={handleStatusChange}>
-                            </c-task-item>
-                        </template>
-                        <template if:true={noDisciplineTasks}>
-                            <p class="empty-state">No discipline tasks configured</p>
-                        </template>
-                    </div>
-                </div>
-
-            </template>
-            <!-- ── End Task Sections ── -->
-
+          </div>
         </template>
-        <!-- ── End Main Content ── -->
 
-        <!-- Reflection Modal -->
-        <c-daily-reflection-modal
-            day-log-id={dayLogId}
-            initial-text={dayLog.Reflection__c}
-            onreflectionsaved={handleReflectionSaved}>
-        </c-daily-reflection-modal>
-
-        <!-- Toast -->
-        <template if:true={showToast}>
-            <div class={toastClass} role="status" aria-live="polite">
-                {toastMessage}
+        <template if:true={isTabActive.habits}>
+          <div class="tab-pane">
+            <h2>Configure Habits</h2>
+            <input type="text" value={newHabitName} onchange={updateNewHabitName} placeholder="Habit name" />
+            <select value={newHabitCategory} onchange={updateNewHabitCategory}>
+              <option value="">Category</option>
+              <option value="Health">Health</option>
+              <option value="Career">Career</option>
+              <option value="Discipline">Discipline</option>
+            </select>
+            <select value={newHabitPriority} onchange={updateNewHabitPriority}>
+              <option value="">Priority</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+            <button class="btn btn-primary" onclick={addHabit}>Add Habit</button>
+            <div class="habits-list">
+              <template for:each={userHabits} for:item="habit">
+                <div class="habit-item" key={habit.id}>
+                  <p>{habit.name} - {habit.category}</p>
+                  <button onclick={deleteHabit} data-habitid={habit.id}>Delete</button>
+                </div>
+              </template>
             </div>
+          </div>
         </template>
+      </div>
 
+      <template if:true={showToast}>
+        <div class="toast {toastType}">{toastMessage}</div>
+      </template>
     </div>
+  </template>
 </template>
