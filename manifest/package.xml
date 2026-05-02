@@ -1,18 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    
     <types>
-        <members>authenticationScreen</members>
-        <members>dailyTrackerDashboard</members>            
-        <members>taskItem</members>                   
-        <members>progressRing</members>               
-        <members>dailyReflectionModal</members>       
-        <members>analyticsDashboard</members>  
-        <name>LightningComponentBundle</name>
-    </types>
-    <types>              
-        <members>DailyTrackerController</members>       
-        <members>AnalyticsController</members>  
-        <name>ApexClass</name>
+        <members>Day_Log__c</members>
+        <members>Habit__c</members>
+        <members>Task_Log__c</members>
+        <members>Task__c</members>
+        <members>UserAccount__c</members>
+        <name>CustomObject</name>
     </types>
     <version>58.0</version>
 </Package>

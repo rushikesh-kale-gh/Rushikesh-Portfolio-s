@@ -1,62 +1,119 @@
 <template>
     <div class="analytics-wrap">
 
-        <!-- Header -->
+        <!-- Period Filter -->
         <div class="analytics-header">
-            <h2 class="analytics-title">Analytics</h2>
-            <span class="header-sub">Last 7 days</span>
+            <h2>Analytics Overview</h2>
+            <div class="period-toggle">
+                <button class={btnDay}   data-period="day"   onclick={setPeriod}>Day</button>
+                <button class={btnWeek}  data-period="week"  onclick={setPeriod}>Week</button>
+                <button class={btnMonth} data-period="month" onclick={setPeriod}>Month</button>
+                <button class={btnYear}  data-period="year"  onclick={setPeriod}>Year</button>
+            </div>
         </div>
 
-        <!-- Streak Card -->
-        <div class="streak-card glass-card">
-            <div class="streak-inner">
-                <span class="streak-flame">🔥</span>
-                <div>
-                    <div class="streak-number">{streak}</div>
-                    <div class="streak-label">Day Streak</div>
+        <!-- Summary Cards -->
+        <div class="stat-cards">
+            <div class="stat-card">
+                <span class="stat-icon" style="color:#6366f1">◎</span>
+                <div class="stat-info">
+                    <span class="stat-val">{stats.avgScore}</span>
+                    <span class="stat-label">Avg Score</span>
                 </div>
             </div>
-            <p class="streak-hint">80%+ score = strong day</p>
+            <div class="stat-card">
+                <span class="stat-icon" style="color:#22c55e">♥</span>
+                <div class="stat-info">
+                    <span class="stat-val">{stats.avgHealth}</span>
+                    <span class="stat-label">Avg Health</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon" style="color:#ef4444">★</span>
+                <div class="stat-info">
+                    <span class="stat-val">{stats.avgCareer}</span>
+                    <span class="stat-label">Avg Career</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon" style="color:#f97316">🔥</span>
+                <div class="stat-info">
+                    <span class="stat-val">{stats.streak}</span>
+                    <span class="stat-label">Day Streak</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon" style="color:#eab308">◈</span>
+                <div class="stat-info">
+                    <span class="stat-val">{stats.totalDays}</span>
+                    <span class="stat-label">Total Days</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Weekly Bar Chart -->
-        <div class="glass-card chart-card">
-            <h3 class="section-label">Weekly Score</h3>
-            <div class="bar-chart" aria-label="Weekly score bar chart">
-                <template for:each={weeklyStats} for:item="day">
-                    <div key={day.logDate} class="bar-col">
-                        <div class="bar-wrap">
-                            <div class="bar-fill" style={day.barStyle} title={day.score}></div>
-                        </div>
-                        <span class="bar-day">{day.dayLabel}</span>
-                    </div>
+        <!-- Chart -->
+        <div class="chart-card">
+            <div class="chart-legend">
+                <span class="legend-item blue">● Consistency</span>
+                <span class="legend-item green">● Health</span>
+                <span class="legend-item red">● Career</span>
+            </div>
+            <div class="chart-area">
+                <svg class="line-chart" viewBox={svgViewBox} preserveAspectRatio="none">
+                    <!-- Y Grid lines -->
+                    <template for:each={yGridLines} for:item="g">
+                        <line key={g.key} x1="40" y1={g.y} x2={svgW} y2={g.y} stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                        <text key={g.textKey} x="34" y={g.labelY} text-anchor="end" fill="#475569" font-size="10">{g.label}</text>
+                    </template>
+                    <!-- X labels -->
+                    <template for:each={xLabels} for:item="xl">
+                        <text key={xl.key} x={xl.x} y={xLabelY} text-anchor="middle" fill="#475569" font-size="9">{xl.label}</text>
+                    </template>
+                    <!-- Consistency line (blue) -->
+                    <template if:true={hasData}>
+                        <polyline points={consistencyPoints} fill="none" stroke="#6366f1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    </template>
+                    <!-- Health line (green) -->
+                    <template if:true={hasData}>
+                        <polyline points={healthPoints} fill="none" stroke="#22c55e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    </template>
+                    <!-- Career line (red) -->
+                    <template if:true={hasData}>
+                        <polyline points={careerPoints} fill="none" stroke="#ef4444" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    </template>
+                    <!-- Dots -->
+                    <template for:each={chartDots} for:item="dot">
+                        <circle key={dot.key} cx={dot.x} cy={dot.y} r="3" fill={dot.color}/>
+                    </template>
+                </svg>
+                <template if:false={hasData}>
+                    <div class="no-data">No data for this period yet. Start logging!</div>
                 </template>
             </div>
-            <div class="bar-legend">
-                <span class="legend-dot green"></span><span>Strong (80%+)</span>
-                <span class="legend-dot amber"></span><span>Fair</span>
-                <span class="legend-dot red"></span><span>Low</span>
-            </div>
         </div>
 
-        <!-- Category Cards -->
-        <div class="glass-card chart-card">
-            <h3 class="section-label">Category Performance (30 days)</h3>
-            <div class="cat-list">
-                <template for:each={categoryStats} for:item="cat">
-                    <div key={cat.category} class="cat-row">
-                        <div class="cat-info">
-                            <span class="cat-emoji">{cat.emoji}</span>
-                            <span class="cat-name">{cat.category}</span>
+        <!-- Log History -->
+        <div class="log-history">
+            <h3>Recent Logs</h3>
+            <div class="log-table-wrap">
+                <template for:each={recentLogs} for:item="log">
+                    <div key={log.Id} class="log-row">
+                        <span class="log-date">{log.dateLabel}</span>
+                        <div class="log-scores">
+                            <span class="log-score-item" style="color:#6366f1">{log.Score__c}%</span>
+                            <span class="log-score-item" style="color:#22c55e">{log.Health_Score__c}%</span>
+                            <span class="log-score-item" style="color:#ef4444">{log.Career_Score__c}%</span>
                         </div>
-                        <div class="cat-bar-bg">
-                            <div class="cat-bar-fill" style={cat.barStyle}></div>
-                        </div>
-                        <span class="cat-pct">{cat.percentage}%</span>
+                        <span class="log-tasks">{log.Completed_Tasks__c}/{log.Total_Tasks__c} tasks</span>
+                        <template if:true={log.hasReflection}>
+                            <span class="log-reflection-badge">📝</span>
+                        </template>
                     </div>
+                </template>
+                <template if:false={hasRecentLogs}>
+                    <p class="no-data-inline">No logs yet.</p>
                 </template>
             </div>
         </div>
-
     </div>
 </template>

@@ -1,30 +1,20 @@
 import { LightningElement, api } from 'lwc';
 
 export default class ProgressRing extends LightningElement {
-    @api totalTasks     = 0;
-    @api completedTasks = 0;
+    @api score = 0;
+    @api label = '';
+    @api size  = 'md'; // sm | md | lg
 
-    get percentage() {
-        if (!this.totalTasks || this.totalTasks === 0) return 0;
-        return Math.round((this.completedTasks / this.totalTasks) * 100);
-    }
-
-    get ringColor() {
-        const p = this.percentage;
-        if (p >= 80) return '#34C759';   // Green
-        if (p >= 50) return '#FF9F0A';   // Amber
-        return '#FF453A';                 // Red
-    }
-
-    get dashArray()  { return (2 * Math.PI * 50).toFixed(2); }
-
-    get dashOffset() {
-        const circumference = 2 * Math.PI * 50;
-        const progress = this.percentage / 100;
-        return (circumference * (1 - progress)).toFixed(2);
-    }
-
-    get ariaLabel() {
-        return `Progress: ${this.percentage}% complete`;
+    get displayScore()  { return Math.round(this.score || 0); }
+    get ringClass()     { return `ring-wrap ring-${this.size}`; }
+    get dashOffset()    { return (263.9 * (1 - (this.score || 0) / 100)).toFixed(1); }
+    get strokeStyle() {
+        const s = this.score || 0;
+        let color;
+        if (s <= 25)       color = '#ef4444';
+        else if (s <= 50)  color = '#f97316';
+        else if (s <= 75)  color = '#eab308';
+        else               color = '#22c55e';
+        return `stroke:${color};`;
     }
 }

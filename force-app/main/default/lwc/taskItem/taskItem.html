@@ -1,31 +1,19 @@
 <template>
-    <div class={itemClass} onclick={handleClick} data-id={taskId}>
-        <!-- Checkbox Type -->
-        <template if:true={isCheckbox}>
-            <div class="task-row">
-                <div class={checkboxClass}>
-                    <template if:true={status}>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <path d="M2 7L5.5 10.5L12 3.5" stroke="currentColor" stroke-width="2"
-                                  stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </template>
-                </div>
-                <span class={labelClass}>{taskName}</span>
-                <template if:true={status}>
-                    <span class="badge-done">Done</span>
-                </template>
+    <div class={rowClass}>
+        <div class="task-left">
+            <input type="checkbox" checked={taskLog.status} class="dt-checkbox"
+                   onchange={handleCheck} />
+            <div class="task-info">
+                <span class="task-name">{taskLog.name}</span>
+                <span class="task-meta">{taskLog.category} · {taskLog.priority}</span>
             </div>
-        </template>
-
-        <!-- Toggle Type -->
-        <template if:true={isToggle}>
-            <div class="task-row">
-                <span class={labelClass}>{taskName}</span>
-                <div class={toggleTrack} aria-checked={statusStr} role="switch" aria-label={taskName}>
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
-        </template>
+        </div>
+        <div class="task-right">
+            <span class="int-label">Intensity</span>
+            <input type="range" min="0" max="100" value={taskLog.intensity}
+                   class="dt-range" onchange={handleIntensity} />
+            <span class="int-val">{taskLog.intensity}%</span>
+            <span class={priorityBadgeClass}>{taskLog.priority}</span>
+        </div>
     </div>
 </template>

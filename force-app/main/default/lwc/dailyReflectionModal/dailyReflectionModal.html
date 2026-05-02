@@ -1,38 +1,100 @@
 <template>
-    <template if:true={isOpen}>
-        <div class="modal-backdrop" onclick={handleBackdropClick}>
-            <div class="modal-card" onclick={stopPropagation}>
-                <div class="modal-header">
-                    <div class="modal-title-row">
-                        <span class="modal-icon">✍️</span>
-                        <h2 class="modal-title">Daily Reflection</h2>
+    <div class="reflection-container">
+        <!-- Score Banner (if today already logged) -->
+        <template if:true={hasExistingLog}>
+            <div class="score-banner">
+                <div class="score-banner-inner">
+                    <c-progress-ring score={todayScore} label="Today's Score" size="lg"></c-progress-ring>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <span class="score-label">Health</span>
+                            <span class="score-val health">{healthScore}%</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Career</span>
+                            <span class="score-val career">{careerScore}%</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Consistency</span>
+                            <span class="score-val consistency">{consistencyScore}%</span>
+                        </div>
                     </div>
-                    <button class="close-btn" onclick={handleClose} aria-label="Close">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M2 2L14 14M14 2L2 14" stroke="currentColor" stroke-width="2"
-                                  stroke-linecap="round"/>
-                        </svg>
-                    </button>
                 </div>
+            </div>
+        </template>
 
-                <p class="modal-subtitle">How was your day? What did you learn?</p>
+        <div class="reflection-grid">
+            <!-- LEFT: Reflection + Notes -->
+            <div class="reflection-left">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">✦</span>
+                        <h3>Daily Reflection</h3>
+                    </div>
+                    <p class="card-hint">How did today go? Reflect on your wins and challenges.</p>
+                    <textarea
+                        class="reflection-textarea"
+                        placeholder="Today I felt... I accomplished... I want to improve..."
+                        value={reflection}
+                        onchange={handleReflection}
+                        rows="6">
+                    </textarea>
+                    <div class="card-header" style="margin-top:20px">
+                        <span class="card-icon">📝</span>
+                        <h3>Custom Note</h3>
+                    </div>
+                    <input type="text" class="dt-input" placeholder="Quick note or insight..."
+                           value={customNote} onchange={handleCustomNote} />
+                </div>
+            </div>
 
-                <textarea
-                    class="reflection-input"
-                    value={reflectionText}
-                    placeholder="Today I focused on… I'm proud of… Tomorrow I'll improve…"
-                    onchange={handleInput}
-                    rows="6">
-                </textarea>
-
-                <div class="modal-footer">
-                    <button class="btn-cancel" onclick={handleClose}>Cancel</button>
-                    <button class="btn-save" onclick={handleSave} disabled={isSaving}>
-                        <template if:true={isSaving}>Saving…</template>
-                        <template if:false={isSaving}>Save Reflection</template>
-                    </button>
+            <!-- RIGHT: Score Config + Habits Quick Log -->
+            <div class="reflection-right">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">◎</span>
+                        <h3>Habit Check-In</h3>
+                        <span class="habit-count">{completedCount}/{totalCount}</span>
+                    </div>
+                    <template if:true={hasHabits}>
+                        <div class="habit-checkin-list">
+                            <template for:each={taskLogs} for:item="tl">
+                                <div key={tl.habitId} class="checkin-row">
+                                    <div class="checkin-top">
+                                        <input type="checkbox" checked={tl.status} data-id={tl.habitId}
+                                               class="dt-checkbox" onchange={handleCheck} />
+                                        <span class="checkin-name">{tl.name}</span>
+                                        <span class={tl.categoryBadge}>{tl.category}</span>
+                                        <span class={tl.priorityBadge}>{tl.priority}</span>
+                                    </div>
+                                    <div class="intensity-row">
+                                        <span class="intensity-label">Intensity</span>
+                                        <input type="range" min="0" max="100" value={tl.intensity}
+                                               data-id={tl.habitId} class="dt-range" onchange={handleIntensity} />
+                                        <span class="intensity-val">{tl.intensity}%</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasHabits}>
+                        <p class="empty-hint">No habits yet. Go to the Habits tab to add some!</p>
+                    </template>
                 </div>
             </div>
         </div>
-    </template>
+
+        <!-- SAVE BAR -->
+        <div class="save-bar">
+            <div class="save-bar-info">
+                <span class="save-date">{todayFormatted}</span>
+                <template if:true={hasHabits}>
+                    <span class="projected-score">Projected: <strong>{projectedScore}%</strong></span>
+                </template>
+            </div>
+            <button class="btn-save" onclick={saveLog}>
+                <span>Save Daily Log</span>
+            </button>
+        </div>
+    </div>
 </template>

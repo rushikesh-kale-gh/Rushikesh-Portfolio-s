@@ -5,11 +5,8 @@
     <nameField>
         <label>Day Log Name</label>
         <type>AutoNumber</type>
-        <displayFormat>DL-{0000}</displayFormat>
+        <displayFormat>DL-{00000}</displayFormat>
     </nameField>
     <deploymentStatus>Deployed</deploymentStatus>
-    <sharingModel>Private</sharingModel>
-    <enableActivities>false</enableActivities>
-    <enableHistory>false</enableHistory>
-    <description>Daily tracking log per user per date</description>
+    <sharingModel>ReadWrite</sharingModel>
 </CustomObject>

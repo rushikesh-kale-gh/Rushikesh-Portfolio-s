@@ -29,7 +29,7 @@ export default class AuthenticationScreen extends LightningElement {
     forgotNewPassword = '';
     forgotError = '';
 
-    @api onLoginSuccess = null;
+    // @api LoginSuccess = null;
 
     // Login Handlers
     handleLoginUsernameChange(event) {

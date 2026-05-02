@@ -1,119 +1,39 @@
-:host { display: block; }
-
-.task-item {
-    padding: 14px 16px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background 0.2s ease, transform 0.1s ease;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 8px;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.task-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
-}
-
-.task-item:active {
-    transform: scale(0.98);
-}
-
-.task-item.completed {
-    background: rgba(52, 199, 89, 0.08);
-    border-color: rgba(52, 199, 89, 0.2);
-}
+:host { display: block; font-family: 'DM Sans', sans-serif; }
 
 .task-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 14px 18px;
+    gap: 16px;
+    transition: all 0.2s;
+    flex-wrap: wrap;
 }
+.task-row:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+.task-row.completed { border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.04); }
 
-/* ── Checkbox ── */
-.dt-checkbox {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-    color: #fff;
-}
+.task-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 160px; }
+.task-info { display: flex; flex-direction: column; gap: 2px; }
+.task-name { font-size: 14px; font-weight: 500; color: #f1f5f9; }
+.task-meta { font-size: 12px; color: #475569; }
 
-.dt-checkbox.checked {
-    background: #34C759;
-    border-color: #34C759;
-}
+.task-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.int-label { font-size: 11px; color: #475569; white-space: nowrap; }
+.dt-range  { width: 120px; accent-color: #6366f1; cursor: pointer; }
+.int-val   { font-size: 13px; font-weight: 600; color: #818cf8; width: 38px; }
 
-/* ── Labels ── */
-.task-label {
-    flex: 1;
-    font-size: 15px;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.9);
-    letter-spacing: -0.2px;
-    transition: all 0.2s ease;
-}
+.dt-checkbox { width: 16px; height: 16px; accent-color: #6366f1; cursor: pointer; flex-shrink: 0; }
 
-.done-label {
-    text-decoration: line-through;
-    color: rgba(255, 255, 255, 0.4);
-}
+.pri-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.pri-low      { background: rgba(148,163,184,0.15); color: #94a3b8; }
+.pri-medium   { background: rgba(99,102,241,0.15);  color: #818cf8; }
+.pri-high     { background: rgba(249,115,22,0.15);  color: #f97316; }
+.pri-critical { background: rgba(239,68,68,0.15);   color: #ef4444; }
 
-/* ── Badge ── */
-.badge-done {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: #34C759;
-    background: rgba(52, 199, 89, 0.15);
-    padding: 2px 8px;
-    border-radius: 20px;
-    border: 1px solid rgba(52, 199, 89, 0.3);
-}
-
-/* ── Toggle ── */
-.toggle-track {
-    width: 50px;
-    height: 28px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.15);
-    position: relative;
-    flex-shrink: 0;
-    transition: background 0.25s ease;
-    border: 1px solid rgba(255,255,255,0.1);
-}
-
-.toggle-track.active {
-    background: #34C759;
-    border-color: transparent;
-}
-
-.toggle-thumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.toggle-track.active .toggle-thumb {
-    transform: translateX(22px);
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-    .task-item { padding: 12px 14px; }
-    .task-label { font-size: 14px; }
+@media (max-width: 600px) {
+    .task-right { flex-direction: column; align-items: flex-start; }
+    .dt-range   { width: 100%; }
 }

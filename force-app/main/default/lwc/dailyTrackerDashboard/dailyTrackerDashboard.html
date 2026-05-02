@@ -1,135 +1,303 @@
 <template>
-  <template if:false={isLoggedIn}>
-    <c-authentication-screen onloginsuccess={handleLoginSuccess} onaccountcreated={handleAccountCreated}></c-authentication-screen>
-  </template>
+    <div class={appClass}>
 
-  <template if:true={isLoggedIn}>
-    <div class="dashboard-container">
-      <header class="dashboard-header">
-        <div class="header-content">
-          <h1 class="dashboard-title">Daily Tracker</h1>
-          <p class="user-greeting">Welcome, {currentUsername}!</p>
-          <p class="current-date">{todayDateLabel}</p>
-          <button class="btn-logout" onclick={handleLogout}>Sign Out</button>
-        </div>
-      </header>
+        <!-- ═══════════════ AUTH SCREEN ═══════════════ -->
+        <template if:false={isLoggedIn}>
+            <div class="auth-screen">
+                <div class="auth-card">
+                    <div class="auth-logo">
+                        <div class="logo-ring"></div>
+                        <span class="logo-text">DailyTrack</span>
+                    </div>
+                    <p class="auth-tagline">Your premium daily performance tracker</p>
 
-      <div class="score-overview">
-        <div class="score-card overall">
-          <p>Overall</p>
-          <p class="score-value">{dayLogScore}%</p>
-        </div>
-        <div class="score-card health">
-          <p>Health</p>
-          <p class="score-value">{healthScore}%</p>
-        </div>
-        <div class="score-card career">
-          <p>Career</p>
-          <p class="score-value">{careerScore}%</p>
-        </div>
-        <div class="score-card discipline">
-          <p>Discipline</p>
-          <p class="score-value">{disciplineScore}%</p>
-        </div>
-      </div>
+                    <!-- MODE SWITCH -->
+                    <template if:false={showForgotPassword}>
+                        <div class="auth-tabs">
+                            <button class={signInTabClass} onclick={showSignIn}>Sign In</button>
+                            <button class={createTabClass} onclick={showCreateUser}>Create Account</button>
+                        </div>
 
-      <div class="tabs-container">
-        <div class="tabs-header">
-          <button class={getTabClass('reflection')} onclick={selectTab} data-tab="reflection">📝 Reflection</button>
-          <button class={getTabClass('logs')} onclick={selectTab} data-tab="logs">📊 Show Log</button>
-          <button class={getTabClass('calendar')} onclick={selectTab} data-tab="calendar">📅 Calendar</button>
-          <button class={getTabClass('tasks')} onclick={selectTab} data-tab="tasks">✅ Tasks</button>
-          <button class={getTabClass('habits')} onclick={selectTab} data-tab="habits">⚙️ Habits</button>
-        </div>
+                        <!-- SIGN IN -->
+                        <template if:true={isSignInMode}>
+                            <div class="auth-form">
+                                <div class="field-group">
+                                    <label>Username</label>
+                                    <input type="text" value={authUsername} onchange={handleAuthUsername}
+                                           placeholder="Enter your username" class="dt-input" />
+                                </div>
+                                <div class="field-group">
+                                    <label>Password</label>
+                                    <input type="password" value={authPassword} onchange={handleAuthPassword}
+                                           placeholder="Enter your password" class="dt-input" />
+                                </div>
+                                <template if:true={authError}>
+                                    <p class="auth-error">{authError}</p>
+                                </template>
+                                <button class="btn-primary" onclick={handleSignIn}>Sign In</button>
+                                <button class="btn-ghost" onclick={handleForgotPassword}>Forgot Password?</button>
+                            </div>
+                        </template>
 
-        <template if:true={isTabActive.reflection}>
-          <div class="tab-pane">
-            <h2>Today's Reflection</h2>
-            <textarea class="form-textarea" value={reflectionText} onchange={updateReflectionText} placeholder="How was your day?"></textarea>
-            <button class="btn btn-primary" onclick={saveReflection}>Save Reflection</button>
-          </div>
-        </template>
+                        <!-- CREATE USER -->
+                        <template if:false={isSignInMode}>
+                            <div class="auth-form">
+                                <div class="field-group">
+                                    <label>Username</label>
+                                    <input type="text" value={authUsername} onchange={handleAuthUsername}
+                                           placeholder="Choose a username" class="dt-input" />
+                                </div>
+                                <div class="field-group">
+                                    <label>Password</label>
+                                    <input type="password" value={authPassword} onchange={handleAuthPassword}
+                                           placeholder="Create a password" class="dt-input" />
+                                </div>
+                                <div class="field-group">
+                                    <label>Security Question: In which city were you born?</label>
+                                    <input type="text" value={securityAnswer} onchange={handleSecurityAnswer}
+                                           placeholder="Your birth city" class="dt-input" />
+                                </div>
+                                <template if:true={authError}>
+                                    <p class="auth-error">{authError}</p>
+                                </template>
+                                <button class="btn-primary" onclick={handleCreateUser}>Create Account</button>
+                            </div>
+                        </template>
+                    </template>
 
-        <template if:true={isTabActive.logs}>
-          <div class="tab-pane">
-            <h2>Performance Analytics</h2>
-            <select class="form-select" value={analyticsRange} onchange={changeAnalyticsRange}>
-              <option value="day">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-            </select>
-            <div class="chart-placeholder"><p>📊 Analytics Chart</p></div>
-          </div>
-        </template>
-
-        <template if:true={isTabActive.calendar}>
-          <div class="tab-pane">
-            <h2>Performance Calendar</h2>
-            <div class="calendar-controls">
-              <button onclick={prevMonth}>← Prev</button>
-              <span>{calendarMonthYear}</span>
-              <button onclick={nextMonth}>Next →</button>
-            </div>
-            <div class="calendar-grid">
-              <div class="day-label">S</div><div class="day-label">M</div><div class="day-label">T</div>
-              <div class="day-label">W</div><div class="day-label">T</div><div class="day-label">F</div><div class="day-label">S</div>
-              <template for:each={calendarDays} for:item="day">
-                <div class={getDayClass(day)} key={day.date}>{day.day}<template if:true={day.score}><small>{day.score}%</small></template></div>
-              </template>
-            </div>
-          </div>
-        </template>
-
-        <template if:true={isTabActive.tasks}>
-          <div class="tab-pane">
-            <h2>Today's Tasks</h2>
-            <template for:each={todayTasks} for:item="task">
-              <div class="task-card" key={task.id}>
-                <h4>{task.name}</h4><span class="badge">{task.category}</span>
-                <p>Priority: {task.priority}</p>
-                <input type="checkbox" checked={task.completed} onchange={toggleTask} data-taskid={task.id} />
-                <template if:true={task.completed}>
-                  <input type="range" min="0" max="100" value={task.intensity} onchange={updateIntensity} data-taskid={task.id} />
-                  <span>{task.intensity}%</span>
-                </template>
-              </div>
-            </template>
-          </div>
-        </template>
-
-        <template if:true={isTabActive.habits}>
-          <div class="tab-pane">
-            <h2>Configure Habits</h2>
-            <input type="text" value={newHabitName} onchange={updateNewHabitName} placeholder="Habit name" />
-            <select value={newHabitCategory} onchange={updateNewHabitCategory}>
-              <option value="">Category</option>
-              <option value="Health">Health</option>
-              <option value="Career">Career</option>
-              <option value="Discipline">Discipline</option>
-            </select>
-            <select value={newHabitPriority} onchange={updateNewHabitPriority}>
-              <option value="">Priority</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-            <button class="btn btn-primary" onclick={addHabit}>Add Habit</button>
-            <div class="habits-list">
-              <template for:each={userHabits} for:item="habit">
-                <div class="habit-item" key={habit.id}>
-                  <p>{habit.name} - {habit.category}</p>
-                  <button onclick={deleteHabit} data-habitid={habit.id}>Delete</button>
+                    <!-- FORGOT PASSWORD -->
+                    <template if:true={showForgotPassword}>
+                        <div class="auth-form">
+                            <h3 class="forgot-title">Reset Password</h3>
+                            <template if:false={securityVerified}>
+                                <div class="field-group">
+                                    <label>Username</label>
+                                    <input type="text" value={authUsername} onchange={handleAuthUsername}
+                                           placeholder="Enter your username" class="dt-input" />
+                                </div>
+                                <div class="field-group">
+                                    <label>In which city were you born?</label>
+                                    <input type="text" value={securityAnswer} onchange={handleSecurityAnswer}
+                                           placeholder="Your answer" class="dt-input" />
+                                </div>
+                                <template if:true={authError}>
+                                    <p class="auth-error">{authError}</p>
+                                </template>
+                                <button class="btn-primary" onclick={handleVerifySecurity}>Verify</button>
+                                <button class="btn-ghost" onclick={cancelForgot}>Back to Sign In</button>
+                            </template>
+                            <template if:true={securityVerified}>
+                                <div class="field-group">
+                                    <label>New Password</label>
+                                    <input type="password" value={newPassword} onchange={handleNewPassword}
+                                           placeholder="Enter new password" class="dt-input" />
+                                </div>
+                                <template if:true={authError}>
+                                    <p class="auth-error">{authError}</p>
+                                </template>
+                                <button class="btn-primary" onclick={handleResetPassword}>Reset Password</button>
+                            </template>
+                        </div>
+                    </template>
                 </div>
-              </template>
             </div>
-          </div>
         </template>
-      </div>
 
-      <template if:true={showToast}>
-        <div class="toast {toastType}">{toastMessage}</div>
-      </template>
+        <!-- ═══════════════ MAIN APP ═══════════════ -->
+        <template if:true={isLoggedIn}>
+            <!-- TOP BAR -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <div class="logo-small">DT</div>
+                    <span class="app-name">DailyTrack</span>
+                </div>
+                <div class="top-bar-center">
+                    <span class="greeting">Welcome, {currentUsername}</span>
+                </div>
+                <div class="top-bar-right">
+                    <span class="today-date">{todayFormatted}</span>
+                    <button class="btn-logout" onclick={handleLogout}>Logout</button>
+                </div>
+            </header>
+
+            <!-- TAB NAV -->
+            <nav class="tab-nav">
+                <button class={tab1Class} data-tab="1" onclick={switchTab}>
+                    <span class="tab-icon">✦</span>
+                    <span class="tab-label">Daily Log</span>
+                </button>
+                <button class={tab2Class} data-tab="2" onclick={switchTab}>
+                    <span class="tab-icon">◈</span>
+                    <span class="tab-label">Analytics</span>
+                </button>
+                <button class={tab3Class} data-tab="3" onclick={switchTab}>
+                    <span class="tab-icon">◻</span>
+                    <span class="tab-label">Calendar</span>
+                </button>
+                <button class={tab4Class} data-tab="4" onclick={switchTab}>
+                    <span class="tab-icon">◎</span>
+                    <span class="tab-label">Tasks</span>
+                </button>
+                <button class={tab5Class} data-tab="5" onclick={switchTab}>
+                    <span class="tab-icon">⊕</span>
+                    <span class="tab-label">Habits</span>
+                </button>
+            </nav>
+
+            <!-- CONTENT AREA -->
+            <main class="content-area">
+
+                <!-- ── TAB 1: DAILY LOG ── -->
+                <template if:true={isTab1}>
+                    <c-daily-reflection-modal
+                        user-account-id={currentUserId}
+                        onlogsaved={handleLogSaved}>
+                    </c-daily-reflection-modal>
+                </template>
+
+                <!-- ── TAB 2: ANALYTICS ── -->
+                <template if:true={isTab2}>
+                    <c-analytics-dashboard
+                        user-account-id={currentUserId}>
+                    </c-analytics-dashboard>
+                </template>
+
+                <!-- ── TAB 3: CALENDAR ── -->
+                <template if:true={isTab3}>
+                    <div class="calendar-section">
+                        <div class="section-header">
+                            <h2>Performance Calendar</h2>
+                            <div class="cal-nav">
+                                <button class="cal-nav-btn" onclick={prevMonth}>&#8249;</button>
+                                <span class="cal-month-label">{calendarMonthLabel}</span>
+                                <button class="cal-nav-btn" onclick={nextMonth}>&#8250;</button>
+                            </div>
+                        </div>
+                        <div class="cal-legend">
+                            <span class="leg-item"><span class="leg-dot" style="background:#ef4444"></span>0–25%</span>
+                            <span class="leg-item"><span class="leg-dot" style="background:#f97316"></span>25–50%</span>
+                            <span class="leg-item"><span class="leg-dot" style="background:#eab308"></span>50–75%</span>
+                            <span class="leg-item"><span class="leg-dot" style="background:#22c55e"></span>75–100%</span>
+                        </div>
+                        <div class="calendar-grid">
+                            <div class="cal-header-row">
+                                <template for:each={weekdays} for:item="wd">
+                                    <div key={wd} class="cal-weekday">{wd}</div>
+                                </template>
+                            </div>
+                            <template for:each={calendarDays} for:item="day">
+                                <div key={day.key} class={day.cellClass} style={day.bgStyle}>
+                                    <span class="cal-date-num">{day.dateNum}</span>
+                                    <template if:true={day.hasLog}>
+                                        <span class="cal-pct">{day.scoreLabel}</span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── TAB 4: TASKS ── -->
+                <template if:true={isTab4}>
+                    <div class="tasks-section">
+                        <div class="section-header">
+                            <h2>Today's Tasks</h2>
+                            <span class="tasks-subtitle">Check off and rate your intensity</span>
+                        </div>
+                        <template if:true={hasHabits}>
+                            <div class="task-list">
+                                <template for:each={todayTaskLogs} for:item="tl">
+                                    <c-task-item
+                                        key={tl.habitId}
+                                        task-log={tl}
+                                        onupdated={handleTaskUpdated}>
+                                    </c-task-item>
+                                </template>
+                            </div>
+                            <div class="task-footer">
+                                <button class="btn-primary" onclick={saveTasksOnly}>Save Tasks</button>
+                            </div>
+                        </template>
+                        <template if:false={hasHabits}>
+                            <div class="empty-state">
+                                <p>No habits configured yet.</p>
+                                <button class="btn-primary" data-tab="5" onclick={switchTab}>Configure Habits →</button>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- ── TAB 5: HABITS ── -->
+                <template if:true={isTab5}>
+                    <div class="habits-section">
+                        <div class="section-header">
+                            <h2>My Habits</h2>
+                            <button class="btn-primary" onclick={openAddHabit}>+ Add Habit</button>
+                        </div>
+
+                        <template if:true={showHabitForm}>
+                            <div class="habit-form-card">
+                                <h3>{habitFormTitle}</h3>
+                                <div class="form-row">
+                                    <div class="field-group">
+                                        <label>Habit Name</label>
+                                        <input type="text" value={habitName} onchange={handleHabitName}
+                                               placeholder="e.g. Drink Water" class="dt-input" />
+                                    </div>
+                                    <div class="field-group">
+                                        <label>Category</label>
+                                        <input type="text" value={habitCategory} onchange={handleHabitCategory}
+                                               placeholder="e.g. Health, Career, Focus..." class="dt-input" />
+                                    </div>
+                                    <div class="field-group">
+                                        <label>Priority</label>
+                                        <select value={habitPriority} onchange={handleHabitPriority} class="dt-select">
+                                            <option value="Low">Low (0.3)</option>
+                                            <option value="Medium">Medium (0.5)</option>
+                                            <option value="High">High (0.8)</option>
+                                            <option value="Critical">Critical (1.0)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-primary" onclick={saveHabit}>Save</button>
+                                    <button class="btn-ghost" onclick={cancelHabit}>Cancel</button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div class="habits-list">
+                            <template for:each={habitsList} for:item="h">
+                                <div key={h.Id} class="habit-card">
+                                    <div class="habit-card-left">
+                                        <span class="habit-name">{h.Name}</span>
+                                        <span class="habit-meta">{h.Category__c} · {h.Priority__c}</span>
+                                    </div>
+                                    <div class="habit-card-right">
+                                        <span class={h.priorityBadgeClass}>{h.Priority__c}</span>
+                                        <button class="icon-btn" data-id={h.Id} onclick={editHabit}>✎</button>
+                                        <button class="icon-btn icon-btn-danger" data-id={h.Id} onclick={removeHabit}>✕</button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <template if:false={hasHabits}>
+                            <div class="empty-state">
+                                <p>No habits yet. Add your first habit above!</p>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+            </main>
+
+            <!-- TOAST -->
+            <template if:true={showToast}>
+                <div class={toastClass}>
+                    <span>{toastMessage}</span>
+                </div>
+            </template>
+        </template>
     </div>
-  </template>
 </template>

@@ -1,570 +1,304 @@
-public with sharing class DailyTrackerController {
-    
-    // ============ USER AUTHENTICATION ============
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> createUserAccount(String username, String password, String securityQuestion, String securityAnswer) {
-        Map<String, Object> response = new Map<String, Object>();
-        
+public without sharing class DailyTrackerController {
+
+    // ─── AUTH ────────────────────────────────────────────────────────────────
+
+    @AuraEnabled
+    public static Map<String, Object> createUser(String username, String password, String securityAnswer) {
+        Map<String, Object> result = new Map<String, Object>();
         try {
-            // Check if username already exists
-            List<UserAccount__c> existingUser = [SELECT Id FROM UserAccount__c WHERE Name = :username LIMIT 1];
-            if (!existingUser.isEmpty()) {
-                response.put('success', false);
-                response.put('message', 'Username already exists');
-                return response;
+            List<UserAccount__c> existing = [
+                SELECT Id FROM UserAccount__c WHERE Username__c = :username LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                result.put('success', false);
+                result.put('message', 'Username already exists. Please choose another.');
+                return result;
             }
-            
-            // Create new user account with hashed password
-            UserAccount__c newUser = new UserAccount__c();
-            newUser.Name = username;
-            newUser.Password__c = hashPassword(password);
-            newUser.Security_Question__c = securityQuestion;
-            newUser.Security_Answer__c = securityAnswer.toLowerCase().trim();
-            
-            insert newUser;
-            
-            response.put('success', true);
-            response.put('message', 'User account created successfully');
-            response.put('userId', newUser.Id);
-            return response;
+            UserAccount__c ua = new UserAccount__c(
+                Username__c      = username,
+                Password__c      = password,
+                Security_Answer__c = securityAnswer.toLowerCase().trim(),
+                Is_Active__c     = true
+            );
+            insert ua;
+            result.put('success', true);
+            result.put('userId', ua.Id);
+            result.put('username', ua.Username__c);
         } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
+            result.put('success', false);
+            result.put('message', e.getMessage());
         }
+        return result;
     }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> signInUserAccount(String username, String password) {
-        Map<String, Object> response = new Map<String, Object>();
-        
+
+    @AuraEnabled
+    public static Map<String, Object> signIn(String username, String password) {
+        Map<String, Object> result = new Map<String, Object>();
         try {
-            List<UserAccount__c> users = [SELECT Id, Name, Password__c FROM UserAccount__c WHERE Name = :username LIMIT 1];
-            
-            if (users.isEmpty()) {
-                response.put('success', false);
-                response.put('message', 'Username not found');
-                return response;
-            }
-            
-            UserAccount__c user = users[0];
-            if (!verifyPassword(password, user.Password__c)) {
-                response.put('success', false);
-                response.put('message', 'Password incorrect');
-                return response;
-            }
-            
-            response.put('success', true);
-            response.put('message', 'Login successful');
-            response.put('userId', user.Id);
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> resetPassword(String username, String securityQuestion, String securityAnswer, String newPassword) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            List<UserAccount__c> users = [SELECT Id, Name, Password__c, Security_Question__c, Security_Answer__c 
-                                         FROM UserAccount__c WHERE Name = :username LIMIT 1];
-            
-            if (users.isEmpty()) {
-                response.put('success', false);
-                response.put('message', 'Username not found');
-                return response;
-            }
-            
-            UserAccount__c user = users[0];
-            if (user.Security_Answer__c != securityAnswer.toLowerCase().trim()) {
-                response.put('success', false);
-                response.put('message', 'Security answer incorrect');
-                return response;
-            }
-            
-            user.Password__c = hashPassword(newPassword);
-            update user;
-            
-            response.put('success', true);
-            response.put('message', 'Password updated successfully');
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    @AuraEnabled(cacheable=true)
-    public static Map<String, Object> getUserSecurityQuestion(String username) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            List<UserAccount__c> users = [SELECT Id, Security_Question__c FROM UserAccount__c WHERE Name = :username LIMIT 1];
-            
-            if (users.isEmpty()) {
-                response.put('found', false);
-                return response;
-            }
-            
-            response.put('found', true);
-            response.put('question', users[0].Security_Question__c);
-            return response;
-        } catch (Exception e) {
-            response.put('found', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    // ============ DAILY LOG OPERATIONS ============
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> getDailyLog(String userAccountId, Date logDate) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            List<Day_Log__c> dayLogs = [
-                SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c, Discipline_Score__c, Reflection__c
-                FROM Day_Log__c 
-                WHERE UserAccount__c = :userAccountId AND Date__c = :logDate 
+            List<UserAccount__c> users = [
+                SELECT Id, Username__c, Is_Active__c
+                FROM UserAccount__c
+                WHERE Username__c = :username AND Password__c = :password AND Is_Active__c = true
                 LIMIT 1
             ];
-            
-            if (dayLogs.isEmpty()) {
-                response.put('found', false);
-                return response;
-            }
-            
-            Day_Log__c dayLog = dayLogs[0];
-            response.put('found', true);
-            response.put('id', dayLog.Id);
-            response.put('date', dayLog.Date__c);
-            response.put('score', dayLog.Score__c);
-            response.put('healthScore', dayLog.Health_Score__c);
-            response.put('careerScore', dayLog.Career_Score__c);
-            response.put('disciplineScore', dayLog.Discipline_Score__c);
-            response.put('reflection', dayLog.Reflection__c);
-            
-            return response;
-        } catch (Exception e) {
-            response.put('error', e.getMessage());
-            return response;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> saveDailyLog(String userAccountId, Date logDate, String reflection) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            List<Day_Log__c> dayLogs = [
-                SELECT Id FROM Day_Log__c 
-                WHERE UserAccount__c = :userAccountId AND Date__c = :logDate 
-                LIMIT 1
-            ];
-            
-            Day_Log__c dayLog;
-            if (dayLogs.isEmpty()) {
-                dayLog = new Day_Log__c();
-                dayLog.UserAccount__c = userAccountId;
-                dayLog.Date__c = logDate;
+            if (users.isEmpty()) {
+                result.put('success', false);
+                result.put('message', 'Invalid username or password.');
             } else {
-                dayLog = dayLogs[0];
+                result.put('success', true);
+                result.put('userId', users[0].Id);
+                result.put('username', users[0].Username__c);
             }
-            
-            dayLog.Reflection__c = reflection;
-            
-            // Calculate scores based on task logs
-            calculateDailyScores(dayLog);
-            
-            upsert dayLog;
-            
-            response.put('success', true);
-            response.put('dayLogId', dayLog.Id);
-            return response;
         } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
+            result.put('success', false);
+            result.put('message', e.getMessage());
         }
+        return result;
     }
-    
-    // ============ TASK LOG OPERATIONS ============
-    
-    @AuraEnabled(cacheable=false)
-    public static List<Map<String, Object>> getTasksForDate(String userAccountId, Date logDate) {
-        List<Map<String, Object>> taskLogsList = new List<Map<String, Object>>();
-        
-        try {
-            // First get the Day Log
-            List<Day_Log__c> dayLogs = [
-                SELECT Id FROM Day_Log__c 
-                WHERE UserAccount__c = :userAccountId AND Date__c = :logDate
-            ];
-            
-            if (dayLogs.isEmpty()) {
-                return taskLogsList;
-            }
-            
-            String dayLogId = dayLogs[0].Id;
-            
-            // Get all task logs for this day
-            List<Task_Log__c> taskLogs = [
-                SELECT Id, Task__c, Task__r.Name, Task__r.Category__c, Task__r.Priority__c, 
-                       Task__r.Target_Quantity__c, Intensity__c, Status__c
-                FROM Task_Log__c
-                WHERE Day_Log__c = :dayLogId
-                ORDER BY Task__r.Name
-            ];
-            
-            for (Task_Log__c tl : taskLogs) {
-                Map<String, Object> taskMap = new Map<String, Object>();
-                taskMap.put('taskLogId', tl.Id);
-                taskMap.put('taskId', tl.Task__c);
-                taskMap.put('taskName', tl.Task__r.Name);
-                taskMap.put('category', tl.Task__r.Category__c);
-                taskMap.put('priority', tl.Task__r.Priority__c);
-                taskMap.put('targetQuantity', tl.Task__r.Target_Quantity__c);
-                taskMap.put('intensity', tl.Intensity__c);
-                taskMap.put('status', tl.Status__c);
-                taskLogsList.add(taskMap);
-            }
-            
-            return taskLogsList;
-        } catch (Exception e) {
-            System.debug('Error: ' + e.getMessage());
-            return taskLogsList;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> saveTaskLog(String dayLogId, String taskId, Decimal intensity, Boolean completed) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            List<Task_Log__c> taskLogs = [
-                SELECT Id FROM Task_Log__c 
-                WHERE Day_Log__c = :dayLogId AND Task__c = :taskId 
-                LIMIT 1
-            ];
-            
-            Task_Log__c taskLog;
-            if (taskLogs.isEmpty()) {
-                taskLog = new Task_Log__c();
-                taskLog.Day_Log__c = dayLogId;
-                taskLog.Task__c = taskId;
-            } else {
-                taskLog = taskLogs[0];
-            }
-            
-            taskLog.Intensity__c = intensity;
-            taskLog.Status__c = completed;
-            
-            upsert taskLog;
-            
-            // Recalculate parent day log scores
-            List<Day_Log__c> dayLogs = [SELECT Id FROM Day_Log__c WHERE Id = :dayLogId];
-            if (!dayLogs.isEmpty()) {
-                calculateDailyScores(dayLogs[0]);
-                update dayLogs[0];
-            }
-            
-            response.put('success', true);
-            response.put('taskLogId', taskLog.Id);
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    // ============ TASK/HABIT MANAGEMENT ============
-    
-    @AuraEnabled(cacheable=false)
-    public static List<Map<String, Object>> getUserTasks(String userAccountId) {
-        List<Map<String, Object>> tasksList = new List<Map<String, Object>>();
-        
-        try {
-            List<Task__c> tasks = [
-                SELECT Id, Name, Category__c, Priority__c, Target_Quantity__c, Is_Active__c
-                FROM Task__c
-                ORDER BY Category__c, Name
-            ];
-            
-            for (Task__c task : tasks) {
-                Map<String, Object> taskMap = new Map<String, Object>();
-                taskMap.put('id', task.Id);
-                taskMap.put('name', task.Name);
-                taskMap.put('category', task.Category__c);
-                taskMap.put('priority', task.Priority__c);
-                taskMap.put('targetQuantity', task.Target_Quantity__c);
-                taskMap.put('isActive', task.Is_Active__c);
-                tasksList.add(taskMap);
-            }
-            
-            return tasksList;
-        } catch (Exception e) {
-            System.debug('Error: ' + e.getMessage());
-            return tasksList;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> createTask(String userAccountId, String taskName, String category, String priority, Decimal targetQuantity) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            Task__c newTask = new Task__c();
-            newTask.Name = taskName;
-            newTask.Category__c = category;
-            newTask.Priority__c = priority;
-            newTask.Target_Quantity__c = targetQuantity;
-            newTask.Is_Active__c = true;
-            
-            insert newTask;
-            
-            response.put('success', true);
-            response.put('taskId', newTask.Id);
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> updateTask(String taskId, String taskName, String category, String priority, Decimal targetQuantity, Boolean isActive) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            Task__c task = new Task__c(Id = taskId);
-            task.Name = taskName;
-            task.Category__c = category;
-            task.Priority__c = priority;
-            task.Target_Quantity__c = targetQuantity;
-            task.Is_Active__c = isActive;
-            
-            update task;
-            
-            response.put('success', true);
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static Map<String, Object> deleteTask(String taskId) {
-        Map<String, Object> response = new Map<String, Object>();
-        
-        try {
-            delete new Task__c(Id = taskId);
-            response.put('success', true);
-            return response;
-        } catch (Exception e) {
-            response.put('success', false);
-            response.put('message', 'Error: ' + e.getMessage());
-            return response;
-        }
-    }
-    
-    // ============ ANALYTICS & REPORTING ============
-    
-    @AuraEnabled(cacheable=false)
-    public static List<Map<String, Object>> getLogsDateRange(String userAccountId, Date startDate, Date endDate) {
-        List<Map<String, Object>> logsList = new List<Map<String, Object>>();
-        
-        try {
-            List<Day_Log__c> dayLogs = [
-                SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c, Discipline_Score__c
-                FROM Day_Log__c
-                WHERE UserAccount__c = :userAccountId AND Date__c >= :startDate AND Date__c <= :endDate
-                ORDER BY Date__c ASC
-            ];
-            
-            for (Day_Log__c log : dayLogs) {
-                Map<String, Object> logMap = new Map<String, Object>();
-                logMap.put('date', log.Date__c);
-                logMap.put('overallScore', log.Score__c != null ? log.Score__c : 0);
-                logMap.put('healthScore', log.Health_Score__c != null ? log.Health_Score__c : 0);
-                logMap.put('careerScore', log.Career_Score__c != null ? log.Career_Score__c : 0);
-                logMap.put('disciplineScore', log.Discipline_Score__c != null ? log.Discipline_Score__c : 0);
-                logsList.add(logMap);
-            }
-            
-            return logsList;
-        } catch (Exception e) {
-            System.debug('Error: ' + e.getMessage());
-            return logsList;
-        }
-    }
-    
-    @AuraEnabled(cacheable=false)
-    public static List<Map<String, Object>> getCalendarData(String userAccountId, Integer year, Integer month) {
-        List<Map<String, Object>> calendarData = new List<Map<String, Object>>();
-        
-        try {
-            Date monthStart = Date.newInstance(year, month, 1);
-            Integer daysInMonth = Date.daysInMonth(year, month);
-            Date monthEnd = Date.newInstance(year, month, daysInMonth);
-            
-            Map<Date, Decimal> scoresByDate = new Map<Date, Decimal>();
-            
-            List<Day_Log__c> dayLogs = [
-                SELECT Date__c, Score__c
-                FROM Day_Log__c
-                WHERE UserAccount__c = :userAccountId AND Date__c >= :monthStart AND Date__c <= :monthEnd
-            ];
-            
-            for (Day_Log__c log : dayLogs) {
-                scoresByDate.put(log.Date__c, log.Score__c != null ? log.Score__c : 0);
-            }
-            
-            for (Integer day = 1; day <= daysInMonth; day++) {
-                Date currentDate = Date.newInstance(year, month, day);
-                Decimal score = scoresByDate.containsKey(currentDate) ? scoresByDate.get(currentDate) : null;
-                
-                Map<String, Object> dayData = new Map<String, Object>();
-                dayData.put('date', currentDate);
-                dayData.put('day', day);
-                dayData.put('score', score);
-                if (score != null) {
-                    dayData.put('color', getColorForScore(score));
-                }
-                calendarData.add(dayData);
-            }
-            
-            return calendarData;
-        } catch (Exception e) {
-            System.debug('Error: ' + e.getMessage());
-            return calendarData;
-        }
-    }
-    
-    // ============ HELPER METHODS ============
-    
-    private static String hashPassword(String password) {
-        // In production, use proper hashing (e.g., bcrypt)
-        // For now, using Blob hash for demo
-        Blob hash = Crypto.generateDigest('SHA-256', Blob.valueOf(password + 'salt123'));
-        return EncodingUtil.base64Encode(hash);
-    }
-    
-    private static Boolean verifyPassword(String plainPassword, String hashedPassword) {
-        String hashedInput = hashPassword(plainPassword);
-        return hashedInput == hashedPassword;
-    }
-    
-    private static void calculateDailyScores(Day_Log__c dayLog) {
-        // Get all task logs for this day
-        List<Task_Log__c> taskLogs = [
-            SELECT Id, Task__c, Task__r.Priority__c, Task__r.Category__c, Intensity__c, Status__c
-            FROM Task_Log__c
-            WHERE Day_Log__c = :dayLog.Id AND Status__c = true
+
+    @AuraEnabled
+    public static Map<String, Object> verifySecurityQuestion(String username, String answer) {
+        Map<String, Object> result = new Map<String, Object>();
+        List<UserAccount__c> users = [
+            SELECT Id, Security_Answer__c FROM UserAccount__c WHERE Username__c = :username LIMIT 1
         ];
-        
-        Map<String, List<Map<String, Decimal>>> categoryScores = new Map<String, List<Map<String, Decimal>>>();
-        
-        for (Task_Log__c tl : taskLogs) {
-            String category = tl.Task__r.Category__c;
-            Decimal priority = getPriorityValue(tl.Task__r.Priority__c);
-            Decimal intensity = tl.Intensity__c != null ? tl.Intensity__c : 0;
-            
-            if (!categoryScores.containsKey(category)) {
-                categoryScores.put(category, new List<Map<String, Decimal>>());
-            }
-            
-            Map<String, Decimal> scoreMap = new Map<String, Decimal>();
-            scoreMap.put('priority', priority);
-            scoreMap.put('intensity', intensity);
-            categoryScores.get(category).add(scoreMap);
+        if (users.isEmpty()) {
+            result.put('success', false);
+            result.put('message', 'Username not found.');
+        } else if (users[0].Security_Answer__c == answer.toLowerCase().trim()) {
+            result.put('success', true);
+            result.put('userId', users[0].Id);
+        } else {
+            result.put('success', false);
+            result.put('message', 'Incorrect answer. Please try again.');
         }
-        
-        // Calculate scores per category
-        Decimal healthScore = 0;
-        Decimal careerScore = 0;
-        Decimal disciplineScore = 0;
-        List<Decimal> allScores = new List<Decimal>();
-        
-        if (categoryScores.containsKey('Health')) {
-            healthScore = calculateCategoryScore(categoryScores.get('Health'));
-            allScores.add(healthScore);
-        }
-        
-        if (categoryScores.containsKey('Career')) {
-            careerScore = calculateCategoryScore(categoryScores.get('Career'));
-            allScores.add(careerScore);
-        }
-        
-        if (categoryScores.containsKey('Discipline')) {
-            disciplineScore = calculateCategoryScore(categoryScores.get('Discipline'));
-            allScores.add(disciplineScore);
-        }
-        
-        // Handle other custom categories
-        for (String category : categoryScores.keySet()) {
-            if (category != 'Health' && category != 'Career' && category != 'Discipline') {
-                Decimal score = calculateCategoryScore(categoryScores.get(category));
-                allScores.add(score);
-            }
-        }
-        
-        dayLog.Health_Score__c = healthScore;
-        dayLog.Career_Score__c = careerScore;
-        dayLog.Discipline_Score__c = disciplineScore;
-        
-        // Overall score = average of all category scores
-        if (!allScores.isEmpty()) {
-            Decimal totalScore = 0;
-            for (Decimal score : allScores) {
-                totalScore += score;
-            }
-            dayLog.Score__c = totalScore / allScores.size();
-        }
+        return result;
     }
-    
-    private static Decimal calculateCategoryScore(List<Map<String, Decimal>> scores) {
-        Decimal totalWeightedScore = 0;
-        Decimal totalPriority = 0;
-        
-        for (Map<String, Decimal> scoreMap : scores) {
-            Decimal priority = scoreMap.get('priority');
-            Decimal intensity = scoreMap.get('intensity');
-            
-            totalWeightedScore += (priority * intensity);
-            totalPriority += priority;
+
+    @AuraEnabled
+    public static Map<String, Object> resetPassword(String userId, String newPassword) {
+        Map<String, Object> result = new Map<String, Object>();
+        try {
+            UserAccount__c ua = new UserAccount__c(Id = userId, Password__c = newPassword);
+            update ua;
+            result.put('success', true);
+        } catch (Exception e) {
+            result.put('success', false);
+            result.put('message', e.getMessage());
         }
-        
-        if (totalPriority == 0) {
-            return 0;
+        return result;
+    }
+
+    // ─── HABITS ──────────────────────────────────────────────────────────────
+
+    @AuraEnabled(cacheable=true)
+    public static List<Habit__c> getHabits(String userAccountId) {
+        return [
+            SELECT Id, Name, Category__c, Priority__c, Is_Active__c, Sort_Order__c
+            FROM Habit__c
+            WHERE UserAccount__c = :userAccountId AND Is_Active__c = true
+            ORDER BY Sort_Order__c ASC NULLS LAST, Name ASC
+        ];
+    }
+
+    @AuraEnabled
+    public static Habit__c saveHabit(String userAccountId, String habitId, String name,
+                                     String category, String priority) {
+        Habit__c h;
+        if (String.isNotBlank(habitId)) {
+            h = new Habit__c(Id = habitId, Name = name, Category__c = category, Priority__c = priority);
+        } else {
+            h = new Habit__c(
+                Name             = name,
+                Category__c      = category,
+                Priority__c      = priority,
+                Is_Active__c     = true,
+                UserAccount__c  = userAccountId
+            );
         }
-        
-        return totalWeightedScore / (totalPriority * 100);
+        upsert h;
+        return h;
     }
-    
-    private static Decimal getPriorityValue(String priority) {
-        if (priority == 'Low') return 0.3;
-        if (priority == 'Medium') return 0.5;
-        if (priority == 'High') return 0.8;
-        if (priority == 'Critical') return 1.0;
-        return 0.5;
+
+    @AuraEnabled
+    public static void deleteHabit(String habitId) {
+        Habit__c h = new Habit__c(Id = habitId, Is_Active__c = false);
+        update h;
     }
-    
-    private static String getColorForScore(Decimal score) {
-        if (score == null) return 'gray';
-        if (score >= 75) return 'green';
-        if (score >= 50) return 'yellow';
-        if (score >= 25) return 'orange';
-        return 'red';
+
+    // ─── DAY LOG ─────────────────────────────────────────────────────────────
+
+    @AuraEnabled
+    public static Map<String, Object> getTodayLog(String userAccountId) {
+        Map<String, Object> result = new Map<String, Object>();
+        Date today = Date.today();
+        List<Day_Log__c> logs = [
+            SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c,
+                   Discipline_Score__c, Consistency_Score__c, Reflection__c,
+                   Completed_Tasks__c, Total_Tasks__c
+            FROM Day_Log__c
+            WHERE UserAccount__c = :userAccountId AND Date__c = :today
+            LIMIT 1
+        ];
+        if (!logs.isEmpty()) {
+            result.put('dayLog', logs[0]);
+            result.put('taskLogs', getTaskLogsForDay(logs[0].Id));
+        } else {
+            result.put('dayLog', null);
+            result.put('taskLogs', new List<Task_Log__c>());
+        }
+        return result;
+    }
+
+    @AuraEnabled
+    public static List<Task_Log__c> getTaskLogsForDay(String dayLogId) {
+        return [
+            SELECT Id, Habit__c, Habit__r.Name, Habit__r.Category__c, Habit__r.Priority__c,
+                   Status__c, Intensity__c, Score_Value__c
+            FROM Task_Log__c
+            WHERE Day_Log__c = :dayLogId
+            ORDER BY Habit__r.Sort_Order__c ASC NULLS LAST
+        ];
+    }
+
+    @AuraEnabled
+    public static Map<String, Object> saveDayLog(String userAccountId, String reflection,
+                                                  List<Map<String, Object>> taskData) {
+        Map<String, Object> result = new Map<String, Object>();
+        try {
+            Date today = Date.today();
+            List<Day_Log__c> existing = [
+                SELECT Id FROM Day_Log__c WHERE UserAccount__c = :userAccountId AND Date__c = :today LIMIT 1
+            ];
+            Day_Log__c dl;
+            if (!existing.isEmpty()) {
+                dl = existing[0];
+            } else {
+                dl = new Day_Log__c(UserAccount__c = userAccountId, Date__c = today);
+                insert dl;
+            }
+
+            // Upsert task logs
+            Map<String, Task_Log__c> existingTaskLogs = new Map<String, Task_Log__c>();
+            for (Task_Log__c tl : [SELECT Id, Habit__c FROM Task_Log__c WHERE Day_Log__c = :dl.Id]) {
+                existingTaskLogs.put(tl.Habit__c, tl);
+            }
+
+            List<Task_Log__c> toUpsert = new List<Task_Log__c>();
+            Decimal healthNum = 0, healthDen = 0;
+            Decimal careerNum = 0, careerDen = 0;
+            Decimal totalNum = 0, totalDen = 0;
+            Integer completed = 0;
+
+            Map<String, Decimal> priorityMap = new Map<String, Decimal>{
+                'Low' => 0.3, 'Medium' => 0.5, 'High' => 0.8, 'Critical' => 1.0
+            };
+
+            for (Map<String, Object> td : taskData) {
+                String habitId  = (String)  td.get('habitId');
+                Boolean status  = (Boolean) td.get('status');
+                Decimal intensity = Decimal.valueOf(String.valueOf(td.get('intensity')));
+                String priority = (String)  td.get('priority');
+                String category = (String)  td.get('category');
+
+                Decimal pw = priorityMap.containsKey(priority) ? priorityMap.get(priority) : 0.5;
+                Decimal scoreVal = pw * (intensity / 100);
+
+                Task_Log__c tl;
+                if (existingTaskLogs.containsKey(habitId)) {
+                    tl = existingTaskLogs.get(habitId);
+                } else {
+                    tl = new Task_Log__c(Day_Log__c = dl.Id, Habit__c = habitId);
+                }
+                tl.Status__c    = status;
+                tl.Intensity__c = intensity;
+                tl.Score_Value__c = scoreVal * 100;
+                toUpsert.add(tl);
+
+                // Accumulate scores
+                Decimal maxScore = pw * 1.0;
+                totalNum += scoreVal;
+                totalDen += maxScore;
+
+                String cat = category != null ? category.toLowerCase() : '';
+                if (cat == 'health') {
+                    healthNum += scoreVal;
+                    healthDen += maxScore;
+                } else if (cat == 'career') {
+                    careerNum += scoreVal;
+                    careerDen += maxScore;
+                }
+                if (status) completed++;
+            }
+
+            upsert toUpsert;
+
+            // Calculate scores (0-100)
+            Decimal finalScore   = totalDen > 0 ? (totalNum / totalDen) * 100 : 0;
+            Decimal healthScore  = healthDen > 0 ? (healthNum / healthDen) * 100 : 0;
+            Decimal careerScore  = careerDen > 0 ? (careerNum / careerDen) * 100 : 0;
+            Decimal consistency  = healthDen > 0 && careerDen > 0
+                                   ? (healthScore + careerScore) / 2 : finalScore;
+
+            dl.Reflection__c         = reflection;
+            dl.Score__c              = finalScore.setScale(1);
+            dl.Health_Score__c       = healthScore.setScale(1);
+            dl.Career_Score__c       = careerScore.setScale(1);
+            dl.Consistency_Score__c  = consistency.setScale(1);
+            dl.Completed_Tasks__c    = completed;
+            dl.Total_Tasks__c        = taskData.size();
+            update dl;
+
+            result.put('success', true);
+            result.put('dayLogId', dl.Id);
+            result.put('score', finalScore.setScale(1));
+        } catch (Exception e) {
+            result.put('success', false);
+            result.put('message', e.getMessage());
+        }
+        return result;
+    }
+
+    // ─── ANALYTICS ───────────────────────────────────────────────────────────
+
+    @AuraEnabled(cacheable=true)
+    public static List<Day_Log__c> getAnalyticsData(String userAccountId, String period) {
+        Date startDate;
+        Date today = Date.today();
+        if (period == 'week')       startDate = today.addDays(-7);
+        else if (period == 'month') startDate = today.addDays(-30);
+        else if (period == 'year')  startDate = today.addDays(-365);
+        else                        startDate = today.addDays(-7); // default week
+
+        return [
+            SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c,
+                   Consistency_Score__c, Completed_Tasks__c, Total_Tasks__c
+            FROM Day_Log__c
+            WHERE UserAccount__c = :userAccountId AND Date__c >= :startDate
+            ORDER BY Date__c ASC
+        ];
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<Day_Log__c> getCalendarData(String userAccountId, Integer year, Integer month) {
+        Date startDate = Date.newInstance(year, month, 1);
+        Date endDate   = startDate.addMonths(1).addDays(-1);
+        return [
+            SELECT Id, Date__c, Score__c
+            FROM Day_Log__c
+            WHERE UserAccount__c = :userAccountId AND Date__c >= :startDate AND Date__c <= :endDate
+            ORDER BY Date__c ASC
+        ];
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<Day_Log__c> getAllLogs(String userAccountId) {
+        return [
+            SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c,
+                   Consistency_Score__c, Reflection__c, Completed_Tasks__c, Total_Tasks__c
+            FROM Day_Log__c
+            WHERE UserAccount__c = :userAccountId
+            ORDER BY Date__c DESC
+        ];
     }
 }
