@@ -87,6 +87,22 @@ export default class DailyTrackerDashboard extends LightningElement {
     handleSecurityAnswer(e) { this.securityAnswer = e.target.value; }
     handleNewPassword(e)    { this.newPassword    = e.target.value; }
 
+    removeClasses() {
+        try {
+            document.querySelectorAll('div').forEach(element => {
+                if (element.classList[0] == "cCenterPanel" || element.classList[0] == "slds-col--padded") {
+                    element.removeAttribute('class');
+                }
+            });
+        } catch (error) {
+            console.log('RemoveAttribute Error : ' + error);
+        }
+    }
+
+    connectedCallback() {
+        this.removeClasses();
+    }
+
     async handleCreateUser() {
         this.authError = '';
         if (!this.authUsername || !this.authPassword || !this.securityAnswer) {
