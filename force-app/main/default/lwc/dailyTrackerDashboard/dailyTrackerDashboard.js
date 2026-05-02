@@ -49,6 +49,17 @@ export default class DailyTrackerDashboard extends LightningElement {
     @track calYear  = new Date().getFullYear();
     @track calMonth = new Date().getMonth(); // 0-based
     @track calendarDays = [];
+    
+    // Calendar Detail Modal
+    @track showDayDetailModal = false;
+    @track selectedDayDetail = {
+        date: '',
+        dateFormatted: '',
+        score: 0,
+        reflection: '',
+        customNote: '',
+        taskLogs: []
+    };
 
     // Toast
     @track showToast  = false;
@@ -101,6 +112,16 @@ export default class DailyTrackerDashboard extends LightningElement {
 
     connectedCallback() {
         this.removeClasses();
+        // Check sessionStorage for existing login
+        const savedLogin = sessionStorage.getItem('dtLogin');
+        if (savedLogin) {
+            try {
+                const { userId, username } = JSON.parse(savedLogin);
+                this.loginSuccess(userId, username);
+            } catch(e) {
+                console.error('Session restore failed:', e);
+            }
+        }
     }
 
     async handleCreateUser() {
@@ -167,6 +188,8 @@ export default class DailyTrackerDashboard extends LightningElement {
         this.currentUsername = username;
         this.isLoggedIn      = true;
         this.activeTab       = '1';
+        // Save login to sessionStorage for persistence
+        sessionStorage.setItem('dtLogin', JSON.stringify({ userId, username }));
         this.loadHabits();
         this.loadTodayTasks();
     }
@@ -179,6 +202,8 @@ export default class DailyTrackerDashboard extends LightningElement {
         this.authPassword    = '';
         this.activeTab       = '1';
         this.habitsList      = [];
+        // Clear login from sessionStorage
+        sessionStorage.removeItem('dtLogin');
     }
 
     // ─── TAB NAVIGATION ──────────────────────────────────────────────────────
@@ -335,13 +360,55 @@ export default class DailyTrackerDashboard extends LightningElement {
                     key: dateStr,
                     dateNum: d,
                     hasLog,
+                    score,
+                    dateStr,
                     scoreLabel: hasLog ? `${Math.round(score)}%` : '',
                     cellClass: `cal-cell${hasLog ? ' has-log' : ''}${isToday ? ' today' : ''}`,
-                    bgStyle:   bg ? `background:${bg};` : ''
+                    bgStyle:   bg ? `background:${bg};` : '',
+                    isClickable: hasLog
                 });
             }
             this.calendarDays = cells;
         } catch(e) { console.error(e); }
+    }
+
+    // ─── CALENDAR DETAIL MODAL ────────────────────────────────────────────────
+    async handleCalendarDayClick(e) {
+        const dateStr = e.currentTarget.dataset.datestr;
+        if (!dateStr) return;
+        
+        try {
+            const res = await getTodayLog({ userAccountId: this.currentUserId, date: dateStr });
+            if (res.dayLog) {
+                const dayLog = res.dayLog;
+                const taskLogs = res.taskLogs || [];
+                this.selectedDayDetail = {
+                    date: dateStr,
+                    dateFormatted: new Date(dateStr).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
+                    score: dayLog.Score__c || 0,
+                    reflection: dayLog.Reflection__c || '',
+                    customNote: dayLog.Custom_Note__c || '',
+                    taskLogs: taskLogs.map(tl => ({
+                        name: tl.Habit_Name__c || 'Unknown',
+                        status: tl.Status__c ? '✓' : '✗',
+                        intensity: tl.Intensity__c || 0,
+                        category: tl.Category__c || ''
+                    }))
+                };
+                this.showDayDetailModal = true;
+            }
+        } catch(e) { 
+            this.showToastMsg('Failed to load day details', 'error');
+            console.error(e);
+        }
+    }
+
+    closeDayDetailModal() {
+        this.showDayDetailModal = false;
+    }
+
+    stopPropagation(e) {
+        e.stopPropagation();
     }
 
     // ─── TOAST ───────────────────────────────────────────────────────────────

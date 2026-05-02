@@ -186,7 +186,10 @@
                                 </template>
                             </div>
                             <template for:each={calendarDays} for:item="day">
-                                <div key={day.key} class={day.cellClass} style={day.bgStyle}>
+                                <div key={day.key} class={day.cellClass} style={day.bgStyle}
+                                     data-datestr={day.dateStr}
+                                     onclick={handleCalendarDayClick}
+                                     class:clickable={day.isClickable}>
                                     <span class="cal-date-num">{day.dateNum}</span>
                                     <template if:true={day.hasLog}>
                                         <span class="cal-pct">{day.scoreLabel}</span>
@@ -296,6 +299,51 @@
             <template if:true={showToast}>
                 <div class={toastClass}>
                     <span>{toastMessage}</span>
+                </div>
+            </template>
+
+            <!-- DAY DETAIL MODAL -->
+            <template if:true={showDayDetailModal}>
+                <div class="modal-overlay" onclick={closeDayDetailModal}>
+                    <div class="modal-content" onclick={stopPropagation}>
+                        <div class="modal-header">
+                            <h2>{selectedDayDetail.dateFormatted}</h2>
+                            <button class="modal-close" onclick={closeDayDetailModal}>✕</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="day-score-section">
+                                <div class="score-circle">
+                                    <span class="score-value">{selectedDayDetail.score}%</span>
+                                </div>
+                            </div>
+                            <template if:true={selectedDayDetail.reflection}>
+                                <div class="day-section">
+                                    <h3>Reflection</h3>
+                                    <p class="day-text">{selectedDayDetail.reflection}</p>
+                                </div>
+                            </template>
+                            <template if:true={selectedDayDetail.customNote}>
+                                <div class="day-section">
+                                    <h3>Custom Note</h3>
+                                    <p class="day-text">{selectedDayDetail.customNote}</p>
+                                </div>
+                            </template>
+                            <template if:true={selectedDayDetail.taskLogs.length}>
+                                <div class="day-section">
+                                    <h3>Tasks Completed</h3>
+                                    <div class="task-list-detail">
+                                        <template for:each={selectedDayDetail.taskLogs} for:item="task">
+                                            <div key={task.name} class="task-row-detail">
+                                                <span class="task-name">{task.name}</span>
+                                                <span class="task-status">{task.status}</span>
+                                                <span class="task-intensity">{task.intensity}%</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                 </div>
             </template>
         </template>
