@@ -301,4 +301,31 @@ public without sharing class DailyTrackerController {
             ORDER BY Date__c DESC
         ];
     }
+
+    @AuraEnabled
+    public static Map<String, Object> getDayLog(String userAccountId, String dateStr) {
+        Map<String, Object> result = new Map<String, Object>();
+        try {
+            Date targetDate = Date.valueOf(dateStr);
+            List<Day_Log__c> logs = [
+                SELECT Id, Date__c, Score__c, Health_Score__c, Career_Score__c,
+                       Consistency_Score__c, Reflection__c,
+                       Completed_Tasks__c, Total_Tasks__c
+                FROM Day_Log__c
+                WHERE UserAccount__c = :userAccountId AND Date__c = :targetDate
+                LIMIT 1
+            ];
+            if (!logs.isEmpty()) {
+                result.put('dayLog', logs[0]);
+                result.put('taskLogs', getTaskLogsForDay(logs[0].Id));
+            } else {
+                result.put('dayLog', null);
+                result.put('taskLogs', new List<Task_Log__c>());
+            }
+        } catch (Exception e) {
+            result.put('dayLog', null);
+            result.put('taskLogs', new List<Task_Log__c>());
+        }
+        return result;
+    }
 }

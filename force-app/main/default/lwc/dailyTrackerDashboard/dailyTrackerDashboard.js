@@ -6,7 +6,7 @@ import resetPassword     from '@salesforce/apex/DailyTrackerController.resetPass
 import getHabits         from '@salesforce/apex/DailyTrackerController.getHabits';
 import saveHabitApex     from '@salesforce/apex/DailyTrackerController.saveHabit';
 import deleteHabit       from '@salesforce/apex/DailyTrackerController.deleteHabit';
-import getTodayLog       from '@salesforce/apex/DailyTrackerController.getTodayLog';
+import getDayLog         from '@salesforce/apex/DailyTrackerController.getDayLog';
 import saveDayLog        from '@salesforce/apex/DailyTrackerController.saveDayLog';
 import getCalendarData   from '@salesforce/apex/DailyTrackerController.getCalendarData';
 
@@ -324,6 +324,31 @@ export default class DailyTrackerDashboard extends LightningElement {
 
     handleLogSaved(e) {
         this.showToastMsg(`Daily log saved! Score: ${e.detail.score}%`, 'success');
+        this.refreshAfterSave();
+    }
+
+    async refreshAfterSave() {
+        console.log('Starting refresh after save');
+        // Refresh reflection modal
+        const reflectionComponent = this.template.querySelector('c-daily-reflection-modal');
+        console.log('Reflection component found:', !!reflectionComponent);
+        if (reflectionComponent && reflectionComponent.refresh) {
+            console.log('Calling reflection refresh');
+            await reflectionComponent.refresh();
+        }
+        // Refresh analytics (only if it exists in DOM)
+        const analyticsComponent = this.template.querySelector('c-analytics-dashboard');
+        console.log('Analytics component found:', !!analyticsComponent);
+        if (analyticsComponent && analyticsComponent.refresh) {
+            console.log('Calling analytics refresh');
+            await analyticsComponent.refresh();
+        }
+        // Refresh calendar
+        console.log('Rebuilding calendar');
+        this.buildCalendar();
+        // Reload today tasks
+        console.log('Reloading today tasks');
+        await this.loadTodayTasks();
     }
 
     // ─── CALENDAR ────────────────────────────────────────────────────────────
@@ -375,10 +400,16 @@ export default class DailyTrackerDashboard extends LightningElement {
     // ─── CALENDAR DETAIL MODAL ────────────────────────────────────────────────
     async handleCalendarDayClick(e) {
         const dateStr = e.currentTarget.dataset.datestr;
-        if (!dateStr) return;
+        console.log('Calendar day clicked:', dateStr);
+        if (!dateStr) {
+            console.log('No dateStr found');
+            return;
+        }
         
         try {
-            const res = await getTodayLog({ userAccountId: this.currentUserId, date: dateStr });
+            console.log('Calling getDayLog for:', this.currentUserId, dateStr);
+            const res = await getDayLog({ userAccountId: this.currentUserId, dateStr: dateStr });
+            console.log('getDayLog response:', res);
             if (res.dayLog) {
                 const dayLog = res.dayLog;
                 const taskLogs = res.taskLogs || [];
@@ -389,17 +420,21 @@ export default class DailyTrackerDashboard extends LightningElement {
                     reflection: dayLog.Reflection__c || '',
                     customNote: dayLog.Custom_Note__c || '',
                     taskLogs: taskLogs.map(tl => ({
-                        name: tl.Habit_Name__c || 'Unknown',
+                        name: tl.Habit__r.Name || 'Unknown',
                         status: tl.Status__c ? '✓' : '✗',
                         intensity: tl.Intensity__c || 0,
-                        category: tl.Category__c || ''
+                        category: tl.Habit__r.Category__c || ''
                     }))
                 };
+                console.log('Setting selectedDayDetail:', this.selectedDayDetail);
                 this.showDayDetailModal = true;
+                console.log('Modal should be showing now');
+            } else {
+                console.log('No day log found for this date');
             }
         } catch(e) { 
+            console.error('Error in handleCalendarDayClick:', e);
             this.showToastMsg('Failed to load day details', 'error');
-            console.error(e);
         }
     }
 
